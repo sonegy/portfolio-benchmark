@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Portfolio Return Analysis</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="styles.css" rel="stylesheet">
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container">
+            <a class="navbar-brand" href="#">
+                <i class="fas fa-chart-line me-2"></i>
+                Portfolio Analyzer
+            </a>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        <!-- 포트폴리오 입력 폼 -->
+        <div class="row">
+            <div class="col-12">
+                <div class="card shadow-sm">
+                    <div class="card-header bg-light">
+                        <h5 class="card-title mb-0">
+                            <i class="fas fa-cog me-2"></i>
+                            포트폴리오 설정
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <form id="portfolioForm">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="tickers" class="form-label">주식 심볼 (쉼표로 구분)</label>
+                                        <input type="text" class="form-control" id="tickers" 
+                                               placeholder="AAPL, MSFT, GOOGL, AMZN" value="AAPL, MSFT">
+                                        <div class="form-text">예: AAPL, MSFT, GOOGL (최대 10개)</div>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="mb-3">
+                                        <label for="startDate" class="form-label">시작일</label>
+                                        <input type="date" class="form-control" id="startDate" value="2024-07-06">
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="mb-3">
+                                        <label for="endDate" class="form-label">종료일</label>
+                                        <input type="date" class="form-control" id="endDate" value="2025-07-06">
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- 포트폴리오 가중치 설정 -->
+                            <div class="row">
+                                <div class="col-12">
+                                    <div class="mb-3">
+                                        <label class="form-label">
+                                            <i class="fas fa-balance-scale me-2"></i>
+                                            포트폴리오 가중치 설정
+                                        </label>
+                                        <div id="weightsContainer" class="border rounded p-3 bg-light">
+                                            <div class="text-muted text-center">
+                                                주식 심볼을 입력하면 가중치 설정이 나타납니다
+                                            </div>
+                                        </div>
+                                        <div class="form-text">
+                                            각 주식의 비율을 설정하세요. 총합이 100%가 되도록 자동 조정됩니다.
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="includeDividends" checked>
+                                        <label class="form-check-label" for="includeDividends">
+                                            배당금 포함
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="col-md-6 text-end">
+                                    <button type="submit" class="btn btn-primary">
+                                        <i class="fas fa-chart-bar me-2"></i>
+                                        분석 시작
+                                    </button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 로딩 스피너 -->
+        <div id="loadingSpinner" class="text-center mt-4" style="display: none;">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <p class="mt-2">포트폴리오 분석 중...</p>
+        </div>
+
+        <!-- 결과 섹션 -->
+        <div id="resultsSection" style="display: none;">
+            <!-- 포트폴리오 요약 -->
+            <div class="row mt-4">
+                <div class="col-12">
+                    <div class="card shadow-sm">
+                        <div class="card-header bg-success text-white">
+                            <h5 class="card-title mb-0">
+                                <i class="fas fa-chart-pie me-2"></i>
+                                포트폴리오 요약
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row" id="portfolioSummary">
+                                <!-- 동적으로 생성됨 -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 차트 섹션 -->
+            <div class="row mt-4">
+                <!-- 시계열 차트 -->
+                <div class="col-lg-6">
+                    <div class="card shadow-sm">
+                        <div class="card-header">
+                            <h6 class="card-title mb-0">
+                                <i class="fas fa-line-chart me-2"></i>
+                                누적 수익률 추이
+                            </h6>
+                        </div>
+                        <div class="card-body">
+                            <canvas id="timeSeriesChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 비교 차트 -->
+                <div class="col-lg-6">
+                    <div class="card shadow-sm">
+                        <div class="card-header">
+                            <h6 class="card-title mb-0">
+                                <i class="fas fa-bar-chart me-2"></i>
+                                주식별 수익률 비교
+                            </h6>
+                        </div>
+                        <div class="card-body">
+                            <canvas id="comparisonChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 개별 주식 분석 -->
+            <div class="row mt-4">
+                <div class="col-12">
+                    <div class="card shadow-sm">
+                        <div class="card-header bg-info text-white">
+                            <h5 class="card-title mb-0">
+                                <i class="fas fa-list me-2"></i>
+                                개별 주식 분석
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="table-responsive">
+                                <table class="table table-hover" id="stockAnalysisTable">
+                                    <thead class="table-dark">
+                                        <tr>
+                                            <th>심볼</th>
+                                            <th>가격 수익률</th>
+                                            <th>총 수익률</th>
+                                            <th>연평균 성장률</th>
+                                            <th>변동성</th>
+                                            <th>추천</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <!-- 동적으로 생성됨 -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 리스크 지표 -->
+            <div class="row mt-4">
+                <div class="col-12">
+                    <div class="card shadow-sm">
+                        <div class="card-header bg-warning text-dark">
+                            <h5 class="card-title mb-0">
+                                <i class="fas fa-exclamation-triangle me-2"></i>
+                                리스크 지표
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row" id="riskMetrics">
+                                <!-- 동적으로 생성됨 -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 에러 메시지 -->
+        <div id="errorSection" class="alert alert-danger mt-4" style="display: none;">
+            <h5><i class="fas fa-exclamation-circle me-2"></i>오류 발생</h5>
+            <p id="errorMessage"></p>
+        </div>
+    </div>
+
+    <footer class="bg-light text-center py-3 mt-5">
+        <div class="container">
+            <small class="text-muted">Portfolio Return Analysis System © 2025</small>
+        </div>
+    </footer>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/date-fns@2.29.3/index.min.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>

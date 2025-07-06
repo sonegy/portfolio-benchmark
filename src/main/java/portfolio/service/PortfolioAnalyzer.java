@@ -1,7 +1,9 @@
 package portfolio.service;
 
 import java.util.List;
+import org.springframework.stereotype.Service;
 
+@Service
 public class PortfolioAnalyzer {
     
     private void validateReturnsNotNullOrEmpty(List<Double> returns, String parameterName) {

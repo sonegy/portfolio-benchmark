@@ -1,5 +1,6 @@
 package portfolio.service;
 
+import org.springframework.stereotype.Service;
 import portfolio.model.AnalysisReport;
 import portfolio.model.PortfolioRequest;
 import portfolio.model.PortfolioReturnData;
@@ -16,6 +17,7 @@ import java.util.stream.Collectors;
 /**
  * 포트폴리오 분석 결과 리포트 생성을 담당하는 서비스
  */
+@Service
 public class ReportGenerator {
 
     /**

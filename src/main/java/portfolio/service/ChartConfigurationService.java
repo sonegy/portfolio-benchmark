@@ -1,13 +1,17 @@
 package portfolio.service;
 
+import org.springframework.stereotype.Service;
 import portfolio.model.ChartData;
 
+import java.util.Arrays;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
- * 차트 스타일 및 설정 관리를 담당하는 서비스
+ * 차트 스타일 및 설정 관리 서비스
  */
+@Service
 public class ChartConfigurationService {
 
     private static final Map<String, String> DEFAULT_COLOR_PALETTE = new HashMap<>();

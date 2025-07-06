@@ -2,8 +2,10 @@ package portfolio.service;
 
 import java.util.List;
 import java.util.ArrayList;
+import org.springframework.stereotype.Service;
 import portfolio.api.ChartResponse.Dividend;
 
+@Service
 public class ReturnCalculator {
     
     private void validatePricesForReturn(List<Double> prices) {

@@ -1,16 +1,25 @@
 package portfolio.service;
 
+import org.apache.catalina.valves.JsonAccessLogValve;
+import org.springframework.stereotype.Service;
+
+import lombok.extern.slf4j.Slf4j;
 import portfolio.api.ChartResponse;
 import portfolio.model.PortfolioRequest;
 import portfolio.model.PortfolioReturnData;
 import portfolio.model.StockReturnData;
 import portfolio.util.DateUtils;
+import portfolio.util.JsonLoggingUtils;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 
+@Slf4j
+@Service
 public class PortfolioReturnService {
     
     private final PortfolioDataService portfolioDataService;
@@ -38,6 +47,12 @@ public class PortfolioReturnService {
         
         // Fetch stock data
         Map<String, ChartResponse> stockData = fetchStockData(request.getTickers(), period1, period2);
+        Set<Entry<String, ChartResponse>> entrySet = stockData.entrySet();
+        for (Entry<String,ChartResponse> entry : entrySet) {
+           String key = entry.getKey(); 
+           ChartResponse value = entry.getValue();
+           log.debug("analyzePortfolio {} {}", key, JsonLoggingUtils.toJson(value));
+        }
         
         // Calculate returns for each stock
         List<StockReturnData> stockReturns = calculateStockReturns(request, stockData);

@@ -3,7 +3,9 @@ package portfolio.service;
 import java.time.LocalDate;
 import java.time.DayOfWeek;
 import java.util.List;
+import org.springframework.stereotype.Service;
 
+@Service
 public class PeriodManager {
     
     public void validatePeriod(LocalDate startDate, LocalDate endDate) {

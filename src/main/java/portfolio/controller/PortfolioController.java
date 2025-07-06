@@ -3,6 +3,8 @@ package portfolio.controller;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
+import lombok.extern.slf4j.Slf4j;
 import portfolio.model.AnalysisReport;
 import portfolio.model.ChartData;
 import portfolio.model.PortfolioRequest;
@@ -14,6 +16,7 @@ import portfolio.service.ReportGenerator;
 /**
  * 포트폴리오 분석 REST API 엔드포인트를 제공하는 컨트롤러
  */
+@Slf4j
 @RestController
 @RequestMapping("/api/portfolio")
 @CrossOrigin(origins = "*")
@@ -42,8 +45,10 @@ public class PortfolioController {
             PortfolioReturnData result = portfolioReturnService.analyzePortfolio(request);
             return ResponseEntity.ok(result);
         } catch (IllegalArgumentException e) {
+            log.error("analyzePortfolio", e);
             return ResponseEntity.badRequest().build();
         } catch (Exception e) {
+            log.error("analyzePortfolio", e);
             return ResponseEntity.internalServerError().build();
         }
     }

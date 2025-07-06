@@ -6,16 +6,14 @@ import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
+import org.springframework.stereotype.Service;
 import portfolio.api.ChartResponse;
 import portfolio.api.StockFetcher;
 
+@Service
 public class PortfolioDataService {
     
     private final StockFetcher stockFetcher;
-    
-    public PortfolioDataService() {
-        this.stockFetcher = null;
-    }
     
     public PortfolioDataService(StockFetcher stockFetcher) {
         this.stockFetcher = stockFetcher;

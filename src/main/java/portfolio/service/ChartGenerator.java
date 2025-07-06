@@ -1,5 +1,6 @@
 package portfolio.service;
 
+import org.springframework.stereotype.Service;
 import portfolio.model.ChartData;
 import portfolio.model.PortfolioReturnData;
 import portfolio.model.StockReturnData;
@@ -13,13 +14,10 @@ import java.util.stream.Collectors;
 /**
  * 다양한 형태의 차트 생성을 담당하는 서비스
  */
+@Service
 public class ChartGenerator {
 
     private final ChartConfigurationService configurationService;
-
-    public ChartGenerator() {
-        this.configurationService = new ChartConfigurationService();
-    }
 
     public ChartGenerator(ChartConfigurationService configurationService) {
         this.configurationService = configurationService;
