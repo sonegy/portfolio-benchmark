@@ -1,0 +1,24 @@
+{
+  "request": {
+    "method": "GET",
+    "urlPathPattern": "/v8/finance/chart/AAPL",
+    "queryParameters": {
+      "period1": {
+        "equalTo": "1720224000"
+      },
+      "period2": {
+        "equalTo": "1720483200"
+      },
+      "interval": {
+        "equalTo": "1d"
+      }
+    }
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "bodyFileName": "fetch-history-aapl-response.json"
+  }
+}
