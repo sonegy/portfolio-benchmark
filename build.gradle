@@ -1,0 +1,54 @@
+plugins {
+    id 'org.springframework.boot' version '3.5.3'
+    id 'io.spring.dependency-management' version '1.1.7'
+    id 'java'
+}
+
+group = 'com.example'
+version = '0.0.1-SNAPSHOT'
+sourceCompatibility = '21'
+
+tasks.withType(JavaCompile) {
+    options.encoding = 'UTF-8'
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    // --- Spring Boot Starters ---
+    implementation 'org.springframework.boot:spring-boot-starter'           // Core Spring Boot
+    implementation 'org.springframework.boot:spring-boot-starter-web'        // REST, Web
+    implementation 'org.springframework.boot:spring-boot-starter-logging'    // Logback 포함
+    implementation 'org.springframework.boot:spring-boot-starter-cache'      // Spring Cache
+
+    // --- Cache ---
+    implementation 'com.github.ben-manes.caffeine:caffeine'
+
+    // --- Lombok ---
+    implementation 'org.projectlombok:lombok:1.18.32'
+    annotationProcessor 'org.projectlombok:lombok:1.18.32'
+    testImplementation 'org.projectlombok:lombok:1.18.32'
+    testAnnotationProcessor 'org.projectlombok:lombok:1.18.32'
+
+    // --- HTTP Client ---
+    implementation 'org.apache.httpcomponents.client5:httpclient5'
+
+    // --- 테스트 ---
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'   // JUnit5, Mockito 등 포함
+    testImplementation 'org.junit.jupiter:junit-jupiter:5.10.2'
+    testImplementation 'org.mockito:mockito-core:5.2.0'
+    testImplementation 'org.springframework.cloud:spring-cloud-contract-wiremock' // WireMock 통합
+    testImplementation 'org.springframework.cloud:spring-cloud-starter-contract-stub-runner'
+}
+
+test {
+    useJUnitPlatform()
+}
+
+dependencyManagement {
+    imports {
+        mavenBom "org.springframework.cloud:spring-cloud-dependencies:2023.0.1"
+    }
+}
