@@ -4,8 +4,12 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
+import portfolio.model.PortfolioReturnData;
+import portfolio.model.StockReturnData;
+
 import java.util.List;
 import java.util.Arrays;
+import java.util.stream.Collectors;
 
 public class PortfolioAnalyzerTest {
     
@@ -33,35 +37,43 @@ public class PortfolioAnalyzerTest {
     @Test
     void shouldCalculateVolatility() {
         // Given
-        List<Double> returns = Arrays.asList(0.10, 0.05, -0.02, 0.08, 0.12);
-        
+        List<StockReturnData> returns = Arrays.asList(
+                new StockReturnData("A", 0.10, 0.10, 0),
+                new StockReturnData("B", 0.05, 0.05, 0),
+                new StockReturnData("C", -0.02, -0.02, 0),
+                new StockReturnData("D", 0.08, 0.08, 0),
+                new StockReturnData("E", 0.12, 0.12, 0)
+        );
+        List<Double> weights = Arrays.asList(0.2, 0.2, 0.2, 0.2, 0.2);
+
         // When
-        double volatility = portfolioAnalyzer.calculateVolatility(returns);
-        
+        double volatility = portfolioAnalyzer.calculateVolatility(returns, weights);
+
         // Then
         // Manual calculation:
         // Mean = (0.10 + 0.05 + (-0.02) + 0.08 + 0.12) / 5 = 0.33 / 5 = 0.066
-        // Variance = [(0.10-0.066)² + (0.05-0.066)² + (-0.02-0.066)² + (0.08-0.066)² + (0.12-0.066)²] / 5
-        // Variance = [0.001156 + 0.000256 + 0.007396 + 0.000196 + 0.002916] / 5 = 0.01192 / 5 = 0.002384
-        // Standard deviation = sqrt(0.002384) = 0.04883
+        // Weighted Variance = 0.2 * (0.10-0.066)² + 0.2 * (0.05-0.066)² + 0.2 * (-0.02-0.066)² + 0.2 * (0.08-0.066)² + 0.2 * (0.12-0.066)²
+        // Weighted Variance = 0.2 * 0.001156 + 0.2 * 0.000256 + 0.2 * 0.007396 + 0.2 * 0.000196 + 0.2 * 0.002916
+        // Weighted Variance = 0.0002312 + 0.0000512 + 0.0014792 + 0.0000392 + 0.0005832 = 0.002384
+        // Standard deviation = sqrt(0.002384) = 0.048826
         assertTrue(volatility > 0);
-        assertEquals(0.04883, volatility, 0.001);
+        assertEquals(0.048826, volatility, 0.00001);
     }
     
     @Test
     void shouldCalculateSharpeRatio() {
         // Given
-        List<Double> returns = Arrays.asList(0.10, 0.05, -0.02, 0.08, 0.12);
-        double riskFreeRate = 0.02; // 2% risk-free rate
+        double portfolioTotalReturn = 0.066;
+        double volatility = 0.04883;
         
         // When
-        double sharpeRatio = portfolioAnalyzer.calculateSharpeRatio(returns, riskFreeRate);
+        double sharpeRatio = portfolioAnalyzer.calculateSharpeRatio(portfolioTotalReturn, volatility);
         
         // Then
-        // Mean return = 0.066, Risk-free rate = 0.02, Volatility = 0.04883
-        // Sharpe Ratio = (0.066 - 0.02) / 0.04883 = 0.046 / 0.04883 = 0.942
+        // Mean return = 0.066, Volatility = 0.04883, Risk-free rate = 0.0 (default)
+        // Sharpe Ratio = (0.066 - 0.0) / 0.04883 = 1.3516
         assertTrue(sharpeRatio > 0);
-        assertEquals(0.942, sharpeRatio, 0.01);
+        assertEquals(1.3516, sharpeRatio, 0.0001);
     }
     
     @Test

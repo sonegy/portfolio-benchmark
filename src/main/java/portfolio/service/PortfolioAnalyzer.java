@@ -1,11 +1,15 @@
 package portfolio.service;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
+import portfolio.model.PortfolioReturnData;
+import portfolio.model.StockReturnData;
 
 @Service
 public class PortfolioAnalyzer {
-    
+
     private void validateReturnsNotNullOrEmpty(List<Double> returns, String parameterName) {
         if (returns == null) {
             throw new IllegalArgumentException(parameterName + " cannot be null");
@@ -42,34 +46,83 @@ public class PortfolioAnalyzer {
         return weightedReturn;
     }
     
-    public double calculateVolatility(List<Double> returns) {
-        validateReturnsNotNullOrEmpty(returns, "Returns");
-        validateMinimumSize(returns, 2, "calculate volatility");
+    public double calculateVolatility(List<StockReturnData> stockReturns, List<Double> weights) {
+        List<Double> finalWeights = getFinalWeights(stockReturns.size(), weights);
         
-        // Calculate mean
-        double mean = calculateMean(returns);
+        double portfolioMeanReturn = calculatePortfolioTotalReturn(stockReturns, weights);
+
+        double variance = 0.0;
+        for (int i = 0; i < stockReturns.size(); i++) {
+            variance += finalWeights.get(i) * Math.pow(stockReturns.get(i).getTotalReturn() - portfolioMeanReturn, 2);
+        }
+
+        // This is a simplified variance calculation. A more accurate calculation would involve covariances.
+        // For now, we use the weighted average of individual variances from the mean portfolio return.
         
-        // Calculate variance
-        double variance = returns.stream()
-            .mapToDouble(r -> Math.pow(r - mean, 2))
-            .average()
-            .orElse(0.0);
-        
-        // Return standard deviation (volatility)
         return Math.sqrt(variance);
     }
+
+    public double calculatePortfolioPriceReturn(List<StockReturnData> stockReturns, List<Double> weights) {
+        List<Double> finalWeights = getFinalWeights(stockReturns.size(), weights);
+        double weightedPriceReturn = 0.0;
+        for (int i = 0; i < stockReturns.size(); i++) {
+            weightedPriceReturn += stockReturns.get(i).getPriceReturn() * finalWeights.get(i);
+        }
+        return weightedPriceReturn;
+    }
+
+    public double calculatePortfolioTotalReturn(List<StockReturnData> stockReturns, List<Double> weights) {
+        List<Double> finalWeights = getFinalWeights(stockReturns.size(), weights);
+        double weightedTotalReturn = 0.0;
+        for (int i = 0; i < stockReturns.size(); i++) {
+            weightedTotalReturn += stockReturns.get(i).getTotalReturn() * finalWeights.get(i);
+        }
+        return weightedTotalReturn;
+    }
+
+    public double calculatePortfolioCAGR(List<StockReturnData> stockReturns, List<Double> weights) {
+        List<Double> finalWeights = getFinalWeights(stockReturns.size(), weights);
+        double weightedCagr = 0.0;
+        for (int i = 0; i < stockReturns.size(); i++) {
+            weightedCagr += stockReturns.get(i).getCagr() * finalWeights.get(i);
+        }
+        return weightedCagr;
+    }
+
+    private List<Double> getFinalWeights(int numStocks, List<Double> weights) {
+        if (weights != null && !weights.isEmpty()) {
+            if (weights.size() != numStocks) {
+                throw new IllegalArgumentException("The number of weights must match the number of tickers.");
+            }
+            double sumOfWeights = weights.stream().mapToDouble(Double::doubleValue).sum();
+            if (Math.abs(sumOfWeights - 1.0) > 1e-9) {
+                throw new IllegalArgumentException("The sum of weights must be equal to 1.");
+            }
+            return weights;
+        } else {
+            // Default to equal weights if none are provided
+            double equalWeight = 1.0 / numStocks;
+            List<Double> equalWeights = new ArrayList<>();
+            for (int i = 0; i < numStocks; i++) {
+                equalWeights.add(equalWeight);
+            }
+            return equalWeights;
+        }
+    }
     
-    public double calculateSharpeRatio(List<Double> returns, double riskFreeRate) {
-        validateReturnsNotNullOrEmpty(returns, "Returns");
+    /**
+     * portfolioTotalReturn, volatility 이 먼저 계산되어야 한다. 
+     * @param portfolioData
+     * @return
+     */
+    public double calculateSharpeRatio(double portfolioTotalReturn, double volatility) {
+        double meanReturn = portfolioTotalReturn;
         
-        // Calculate mean return
-        double meanReturn = calculateMean(returns);
-        
-        // Calculate volatility
-        double volatility = calculateVolatility(returns);
+        // Assuming a risk-free rate of 0 for simplicity. This can be made configurable.
+        double riskFreeRate = 0.0;
         
         if (volatility == 0.0) {
-            throw new IllegalArgumentException("Cannot calculate Sharpe ratio when volatility is zero");
+            return 0.0; // Or throw an exception, depending on desired behavior
         }
         
         // Sharpe Ratio = (Mean Return - Risk Free Rate) / Volatility

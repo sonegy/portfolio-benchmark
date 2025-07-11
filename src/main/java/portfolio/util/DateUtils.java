@@ -1,5 +1,6 @@
 package portfolio.util;
 
+import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
@@ -50,5 +51,15 @@ public class DateUtils {
      */
     public static long daysAgoUnixTimestamp(int daysAgo) {
         return toUnixTimestamp(LocalDate.now().minusDays(daysAgo));
+    }
+
+    /**
+     * Convert unix timestamp (seconds since epoch) to LocalDate
+     * 
+     * @param epochSecond unix timestamp as long
+     * @return LocalDate
+     */
+    public static LocalDate toLocalDate(long epochSecond) {
+        return Instant.ofEpochSecond(epochSecond).atZone(ZoneOffset.UTC).toLocalDate();
     }
 }

@@ -7,6 +7,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import portfolio.model.*;
 import portfolio.service.ChartGenerator;
@@ -33,13 +34,13 @@ class PortfolioControllerTest {
     @Autowired
     private ObjectMapper objectMapper;
 
-    @MockBean
+    @MockitoBean
     private PortfolioReturnService portfolioReturnService;
 
-    @MockBean
+    @MockitoBean
     private ChartGenerator chartGenerator;
 
-    @MockBean
+    @MockitoBean
     private ReportGenerator reportGenerator;
 
     private PortfolioRequest sampleRequest;

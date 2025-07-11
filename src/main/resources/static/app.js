@@ -229,9 +229,14 @@ function createTimeSeriesChart(chartData) {
         data: data,
         borderColor: getChartColor(index),
         backgroundColor: getChartColor(index, 0.1),
-        borderWidth: 2,
+        borderWidth: 1.5,
         fill: false,
-        tension: 0.1
+        tension: 0.2,
+        pointRadius: 1.5,
+        pointHoverRadius: 5,
+        pointBackgroundColor: getChartColor(index),
+        pointBorderColor: '#ffffff',
+        pointBorderWidth: 1
     }));
     
     timeSeriesChart = new Chart(ctx, {
@@ -366,9 +371,14 @@ function createDefaultCharts(portfolioData) {
         data: stock.cumulativeReturns || [],
         borderColor: getChartColor(index),
         backgroundColor: getChartColor(index, 0.1),
-        borderWidth: 2,
+        borderWidth: 2.5,
         fill: false,
-        tension: 0.1
+        tension: 0.2,
+        pointRadius: 0.5,
+        pointHoverRadius: 4,
+        pointBackgroundColor: getChartColor(index, 0.3),
+        pointBorderColor: getChartColor(index),
+        pointBorderWidth: 0.5
     }));
     
     timeSeriesChart = new Chart(timeSeriesCtx, {

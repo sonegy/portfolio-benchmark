@@ -19,7 +19,7 @@ class ChartGeneratorTest {
 
     @BeforeEach
     void setUp() {
-        chartGenerator = new ChartGenerator();
+        chartGenerator = new ChartGenerator(new ChartConfigurationService());
         
         // 샘플 데이터 생성
         StockReturnData appleData = new StockReturnData("AAPL", 0.15, 0.18, 0.12);

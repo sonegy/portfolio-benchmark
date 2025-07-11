@@ -1,5 +1,7 @@
 package portfolio.api;
 
+import java.io.Serial;
+import java.io.Serializable;
 import java.util.List;
 import java.util.Map;
 
@@ -13,7 +15,10 @@ import lombok.ToString;
 @Getter
 @Setter
 @ToString
-public class ChartResponse {
+public class ChartResponse implements Serializable {
+    @Serial
+    public static final long serialVersionUID = 1593576000L;
+
     private Chart chart;
 
     @JsonIgnoreProperties(ignoreUnknown = true)
@@ -28,7 +33,8 @@ public class ChartResponse {
     @Getter
     @Setter
     @ToString
-    public static class Result {
+    public static class Result implements Serializable {
+
         private Meta meta;
         private List<Long> timestamp;
         private Events events;
@@ -38,7 +44,8 @@ public class ChartResponse {
     @JsonIgnoreProperties(ignoreUnknown = true)
     @Getter
     @Setter
-    public static class Meta {
+    @ToString
+    public static class Meta implements Serializable {
         private String currency;
         private String symbol;
         private String exchangeName;
@@ -69,14 +76,14 @@ public class ChartResponse {
     @JsonIgnoreProperties(ignoreUnknown = true)
     @Getter
     @Setter
-    public static class Events {
+    public static class Events implements Serializable {
         private Map<String, Dividend> dividends;
     }
 
     @JsonIgnoreProperties(ignoreUnknown = true)
     @Getter
     @Setter
-    public static class Dividend {
+    public static class Dividend implements Serializable {
         private double amount;
         private long date;
     }
@@ -84,7 +91,7 @@ public class ChartResponse {
     @JsonIgnoreProperties(ignoreUnknown = true)
     @Getter
     @Setter
-    public static class CurrentTradingPeriod {
+    public static class CurrentTradingPeriod implements Serializable {
         private TradingPeriod pre;
         private TradingPeriod regular;
         private TradingPeriod post;
@@ -93,7 +100,7 @@ public class ChartResponse {
     @JsonIgnoreProperties(ignoreUnknown = true)
     @Getter
     @Setter
-    public static class TradingPeriod {
+    public static class TradingPeriod implements Serializable {
         private String timezone;
         private long start;
         private long end;
@@ -103,7 +110,7 @@ public class ChartResponse {
     @JsonIgnoreProperties(ignoreUnknown = true)
     @Getter
     @Setter
-    public static class Indicators {
+    public static class Indicators implements Serializable {
         private List<Quote> quote;
         private List<AdjClose> adjclose;
     }
@@ -111,7 +118,7 @@ public class ChartResponse {
     @JsonIgnoreProperties(ignoreUnknown = true)
     @Getter
     @Setter
-    public static class Quote {
+    public static class Quote implements Serializable {
         private List<Long> volume;
         private List<Double> low;
         private List<Double> high;
@@ -122,7 +129,7 @@ public class ChartResponse {
     @JsonIgnoreProperties(ignoreUnknown = true)
     @Getter
     @Setter
-    public static class AdjClose {
+    public static class AdjClose implements Serializable {
         private List<Double> adjclose;
     }
 }

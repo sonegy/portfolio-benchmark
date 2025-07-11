@@ -63,4 +63,5 @@ public class PortfolioReturnData {
     public void setSharpeRatio(double sharpeRatio) {
         this.sharpeRatio = sharpeRatio;
     }
+    
 }

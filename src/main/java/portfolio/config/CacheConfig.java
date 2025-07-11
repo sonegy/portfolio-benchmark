@@ -13,11 +13,13 @@ import java.util.concurrent.TimeUnit;
 @EnableCaching
 public class CacheConfig {
 
-    public static final String STOCK_DATA_CACHE = "stockData";
+    public static final String StockFetcher_fetchHistory = "StockFetcher_fetchHistory";
+    public static final String StockFetcher_fetchDividends = "StockFetcher_fetchDividends";
 
     @Bean
     public CacheManager cacheManager() {
-        CaffeineCacheManager cacheManager = new CaffeineCacheManager(STOCK_DATA_CACHE);
+        CaffeineCacheManager cacheManager = new CaffeineCacheManager(StockFetcher_fetchHistory,
+                StockFetcher_fetchDividends);
         cacheManager.setCaffeine(Caffeine.newBuilder()
                 .expireAfterWrite(1, TimeUnit.HOURS)
                 .maximumSize(100)); // 캐시 최대 크기 100개로 제한

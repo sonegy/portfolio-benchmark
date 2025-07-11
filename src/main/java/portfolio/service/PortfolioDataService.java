@@ -4,7 +4,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
+import java.util.function.Consumer;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import org.springframework.stereotype.Service;
 import portfolio.api.ChartResponse;
@@ -36,14 +38,14 @@ public class PortfolioDataService {
         List<CompletableFuture<Map.Entry<String, ChartResponse>>> futures = tickers.stream()
             .map(ticker -> CompletableFuture.supplyAsync(() -> 
                 Map.entry(ticker, fetcher.apply(ticker, period1, period2))))
-            .collect(Collectors.toList());
+            .toList();
         
         return CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]))
             .thenApply(v -> futures.stream()
                 .map(CompletableFuture::join)
-                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue)));
+                .collect(Collectors.toConcurrentMap(Map.Entry::getKey, Map.Entry::getValue)));
     }
-    
+
     @FunctionalInterface
     private interface TriFunction<T, U, V, R> {
         R apply(T t, U u, V v);

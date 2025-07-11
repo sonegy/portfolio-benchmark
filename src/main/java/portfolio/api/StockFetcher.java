@@ -29,9 +29,10 @@ public class StockFetcher {
         log.info("StockFetcher initialized with url: {}", url);
     }
 
-    @Cacheable(value = CacheConfig.STOCK_DATA_CACHE, key = "#ticker + '-' + #period1 + '-' + #period2 + '-history'")
+    @Cacheable(value = CacheConfig.StockFetcher_fetchHistory)
     public ChartResponse fetchHistory(String ticker, long period1, long period2) {
-        log.info("Fetching history for {} from {} to {}", ticker, period1, period2);
+        String interval = IntervalCalculator.calculateOptimalInterval(period1, period2);
+        log.info("Fetching history for {} from {} to {} with interval {}", ticker, period1, period2, interval);
         return restClient.get()
                 .uri(uriBuilder -> uriBuilder
                         .scheme(scheme)
@@ -40,7 +41,7 @@ public class StockFetcher {
                         .path("/v8/finance/chart/{ticker}")
                         .queryParam("period1", period1)
                         .queryParam("period2", period2)
-                        .queryParam("interval", "1d")
+                        .queryParam("interval", interval)
                         .build(ticker))
                 .retrieve()
                 .body(ChartResponse.class);
@@ -52,9 +53,10 @@ public class StockFetcher {
      * @param ticker ETF 심볼 (예: SCHD)
      * @return Yahoo Finance API의 JSON 응답 문자열
      */
-    @Cacheable(value = CacheConfig.STOCK_DATA_CACHE, key = "#ticker + '-' + #period1 + '-' + #period2 + '-dividends'")
+    @Cacheable(value = CacheConfig.StockFetcher_fetchDividends)
     public ChartResponse fetchDividends(String ticker, long period1, long period2) {
-        log.info("Fetching dividends for {} from {} to {}", ticker, period1, period2);
+        String interval = IntervalCalculator.calculateOptimalInterval(period1, period2);
+        log.info("Fetching dividends for {} from {} to {} with interval {}", ticker, period1, period2, interval);
         return restClient.get()
                 .uri(uriBuilder -> uriBuilder
                         .scheme(scheme)
@@ -63,7 +65,7 @@ public class StockFetcher {
                         .path("/v8/finance/chart/{ticker}")
                         .queryParam("period1", period1)
                         .queryParam("period2", period2)
-                        .queryParam("interval", "1mo")
+                        .queryParam("interval", interval)
                         .queryParam("events", "div")
                         .build(ticker))
                 .retrieve()

@@ -17,15 +17,6 @@ import portfolio.api.StockFetcher;
 public class PortfolioDataServiceTest {
 
     @Test
-    public void shouldCreatePortfolioDataService() {
-        // Given & When
-        PortfolioDataService service = new PortfolioDataService();
-        
-        // Then
-        assertNotNull(service);
-    }
-
-    @Test
     public void shouldCreatePortfolioDataServiceWithStockFetcher() {
         // Given
         StockFetcher stockFetcher = mock(StockFetcher.class);

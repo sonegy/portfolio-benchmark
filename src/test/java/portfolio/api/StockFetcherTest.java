@@ -6,33 +6,31 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.cache.CacheManager;
 import org.springframework.cloud.contract.wiremock.AutoConfigureWireMock;
 import org.springframework.test.context.ActiveProfiles;
-import org.springframework.web.client.RestClient;
-
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.tomakehurst.wiremock.client.WireMock;
 
 import lombok.extern.slf4j.Slf4j;
-import portfolio.config.CacheConfig;
+import portfolio.service.PortfolioDataService;
+
 import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
 import static com.github.tomakehurst.wiremock.client.WireMock.get;
 import static com.github.tomakehurst.wiremock.client.WireMock.stubFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.getRequestedFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.verify;
-import org.springframework.beans.factory.annotation.Value;
 import static org.junit.jupiter.api.Assertions.*;
 
-import java.time.LocalDateTime;
-import portfolio.util.DateUtils;
-import portfolio.util.JsonLoggingUtils;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 
 @Slf4j
 @SpringBootTest
 @ActiveProfiles("test")
 @AutoConfigureWireMock(port = 0, stubs = "classpath:/mappings")
 class StockFetcherTest {
-    
+
     @Autowired
     StockFetcher fetcher;
 
@@ -43,8 +41,10 @@ class StockFetcherTest {
     ObjectMapper objectMapper;
 
     @BeforeEach
-    void setup() {
-        cacheManager.getCache(CacheConfig.STOCK_DATA_CACHE).clear();
+    void setup(){
+        for (String name : cacheManager.getCacheNames()) {
+            cacheManager.getCache(name).clear();
+        }
         WireMock.reset();
     }
 
@@ -67,7 +67,7 @@ class StockFetcherTest {
         long period1 = 1720224000L;
         long period2 = 1720483200L;
         String url = String.format("/v8/finance/chart/%s?period1=%d&period2=%d&interval=1d", ticker, period1, period2);
-        
+
         stubFor(get(urlPathEqualTo("/v8/finance/chart/" + ticker))
                 .willReturn(aResponse()
                         .withHeader("Content-Type", "application/json")
@@ -81,41 +81,41 @@ class StockFetcherTest {
         assertNotNull(response1);
         assertNotNull(response2);
         assertEquals(response1, response2); // Check if the same object is returned
-        
+
         verify(1, getRequestedFor(urlPathEqualTo("/v8/finance/chart/" + ticker)));
     }
 
     @Test
-    @Disabled
-    void fetchHistory_Real() throws JsonProcessingException {
-        // var realFetcher = new StockFetcher(restClient); // This needs a RestClient bean
-        // var period1DateTime = LocalDateTime.now().minusDays(4);
-        // var period2DateTime = LocalDateTime.now();
-        
-        // // period1를 unix time long으로 변환
-        // long period1 = DateUtils.toUnixTimestamp(period1DateTime.toLocalDate());
-        // long period2 = DateUtils.toUnixTimestamp(period2DateTime.toLocalDate());
+    void fetchHistory_shouldBeCached_TwoGivenValues() {
+        // given
+        List<String> tickers = new ArrayList<>();
+        tickers.add("MSFT");
+        tickers.add("AAPL");
 
-        // ChartResponse response = realFetcher.fetchHistory("AAPL", period1, period2);
-        // log.debug("ChartResponse:{}", JsonLoggingUtils.asJsonLoggablePretty(response));
-        // assertNotNull(response);
+        long period1 = 1720224000L;
+        long period2 = 1720483200L;
+
+        for (String ticker : tickers) {
+            stubFor(get(urlPathEqualTo("/v8/finance/chart/" + ticker))
+                    .willReturn(aResponse()
+                            .withHeader("Content-Type", "application/json")
+                            .withBodyFile(switch (ticker) {
+                                case "MSFT" -> "fetch-history-msft-response.json";
+                                case "AAPL" -> "fetch-history-aapl-response.json";
+                                default -> "fetch-history-aapl-response.json";
+                            }))); // Use existing mock data
+        }
+
+        for (int i = 0; i < 10; i++) {
+            CompletableFuture<Map<String, ChartResponse>> stocks = new PortfolioDataService(fetcher)
+                    .fetchMultipleStocks(tickers, period1, period2);
+            Map<String, ChartResponse> map = stocks.join();
+            for (Map.Entry<String, ChartResponse> entry : map.entrySet()) {
+                String key = entry.getKey();
+                ChartResponse value = entry.getValue();
+                log.debug("key and value {} {}", key, value);
+                assertEquals(key, value.getChart().getResult().stream().findFirst().orElseThrow().getMeta().getSymbol());
+            }
+        }
     }
-
-
-    @Test
-    @Disabled
-    void fetchDividends_Real() throws JsonProcessingException {
-        // var realFetcher = new StockFetcher(restClient); // This needs a RestClient bean
-        // var period1DateTime = LocalDateTime.now().minusDays(60);
-        // var period2DateTime = LocalDateTime.now();
-        
-        // // period1를 unix time long으로 변환
-        // long period1 = DateUtils.toUnixTimestamp(period1DateTime.toLocalDate());
-        // long period2 = DateUtils.toUnixTimestamp(period2DateTime.toLocalDate());
-
-        // ChartResponse response = realFetcher.fetchDividends("SCHD", period1, period2);
-        // log.debug("ChartResponse:{}", JsonLoggingUtils.asJsonLoggablePretty(response));
-        // assertNotNull(response);
-    }
-
 }
