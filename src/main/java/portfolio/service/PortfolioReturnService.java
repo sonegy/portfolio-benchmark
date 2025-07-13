@@ -87,17 +87,21 @@ public class PortfolioReturnService {
     private List<StockReturnData> calculateStockReturns(PortfolioRequest request,
             Map<String, ChartResponse> stockData) {
         List<StockReturnData> stockReturns = new ArrayList<>();
-        for (String ticker : request.getTickers()) {
+        List<Double> weights = request.getWeights();
+        
+        for (int i = 0; i < request.getTickers().size(); i++) {
+            String ticker = request.getTickers().get(i);
             ChartResponse chartResponse = stockData.get(ticker);
             if (chartResponse != null) {
-                StockReturnData stockReturn = calculateStockReturn(ticker, chartResponse, request.isIncludeDividends());
+                double weight = (weights != null && i < weights.size()) ? weights.get(i) : 1.0 / request.getTickers().size();
+                StockReturnData stockReturn = calculateStockReturn(ticker, chartResponse, request.isIncludeDividends(), request.getInitialAmount(), weight);
                 stockReturns.add(stockReturn);
             }
         }
         return stockReturns;
     }
 
-    private StockReturnData calculateStockReturn(String ticker, ChartResponse chartResponse, boolean includeDividends) {
+    private StockReturnData calculateStockReturn(String ticker, ChartResponse chartResponse, boolean includeDividends, double initialAmount, double weight) {
         // Extract prices from chart response
         List<Double> prices = extractPrices(chartResponse);
 
@@ -122,6 +126,13 @@ public class PortfolioReturnService {
         StockReturnData stockReturnData = new StockReturnData(ticker, priceReturn, totalReturn, cagr);
         stockReturnData.setCumulativeReturns(returnCalculator.calculateCumulativeReturns(prices, dividends));
         stockReturnData.setDates(extractDates(chartResponse));
+        
+        // Calculate amount changes if initial amount is provided
+        if (initialAmount > 0) {
+            List<Double> amountChanges = returnCalculator.calculateAmountChanges(prices, initialAmount, weight);
+            stockReturnData.setAmountChanges(amountChanges);
+        }
+        
         return stockReturnData;
     }
 

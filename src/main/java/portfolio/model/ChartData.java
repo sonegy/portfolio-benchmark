@@ -13,6 +13,7 @@ public class ChartData {
     private final List<LocalDate> dates;
     private final Map<String, List<Double>> series;
     private final ChartConfiguration configuration;
+    private final List<String> labels;
 
     public ChartData(String title, String type, List<LocalDate> dates, 
                      Map<String, List<Double>> series, ChartConfiguration configuration) {
@@ -21,6 +22,17 @@ public class ChartData {
         this.dates = dates;
         this.series = series;
         this.configuration = configuration;
+        this.labels = null;
+    }
+
+    public ChartData(String title, String type, List<LocalDate> dates, 
+                     Map<String, List<Double>> series, ChartConfiguration configuration, List<String> labels) {
+        this.title = title;
+        this.type = type;
+        this.dates = dates;
+        this.series = series;
+        this.configuration = configuration;
+        this.labels = labels;
     }
 
     public String getTitle() {
@@ -41,6 +53,10 @@ public class ChartData {
 
     public ChartConfiguration getConfiguration() {
         return configuration;
+    }
+
+    public List<String> getLabels() {
+        return labels;
     }
 
     public static class ChartConfiguration {

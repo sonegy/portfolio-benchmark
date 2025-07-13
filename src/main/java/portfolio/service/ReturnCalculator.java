@@ -77,4 +77,49 @@ public class ReturnCalculator {
         
         return cumulativeReturns;
     }
+    
+    public List<Double> calculateAmountChanges(List<Double> prices, double initialAmount) {
+        if (prices == null || prices.isEmpty()) {
+            throw new IllegalArgumentException("Prices list cannot be null or empty");
+        }
+        if (initialAmount < 0) {
+            throw new IllegalArgumentException("Initial amount cannot be negative");
+        }
+        
+        List<Double> amountChanges = new ArrayList<>();
+        double startPrice = prices.get(0);
+        
+        for (double currentPrice : prices) {
+            double currentAmount = initialAmount * (currentPrice / startPrice);
+            amountChanges.add(currentAmount);
+        }
+        
+        return amountChanges;
+    }
+    
+    /**
+     * 가중치를 고려한 금액 변화 계산
+     */
+    public List<Double> calculateAmountChanges(List<Double> prices, double initialAmount, double weight) {
+        if (prices == null || prices.isEmpty()) {
+            throw new IllegalArgumentException("Prices list cannot be null or empty");
+        }
+        if (initialAmount < 0) {
+            throw new IllegalArgumentException("Initial amount cannot be negative");
+        }
+        if (weight < 0 || weight > 1) {
+            throw new IllegalArgumentException("Weight must be between 0 and 1");
+        }
+        
+        List<Double> amountChanges = new ArrayList<>();
+        double startPrice = prices.get(0);
+        double allocatedAmount = initialAmount * weight;
+        
+        for (double currentPrice : prices) {
+            double currentAmount = allocatedAmount * (currentPrice / startPrice);
+            amountChanges.add(currentAmount);
+        }
+        
+        return amountChanges;
+    }
 }

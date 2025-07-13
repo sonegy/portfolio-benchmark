@@ -105,4 +105,16 @@ public class ChartConfigurationService {
             true
         );
     }
+
+    /**
+     * 금액 변화 차트용 설정 생성
+     */
+    public ChartData.ChartConfiguration createAmountChartConfiguration() {
+        return new ChartData.ChartConfiguration(
+            "Date",
+            "Amount ($)",
+            getColorPalette(),
+            true
+        );
+    }
 }

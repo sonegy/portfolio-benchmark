@@ -105,6 +105,23 @@ public class PortfolioController {
     }
 
     /**
+     * 금액 변화 차트 데이터 생성
+     */
+    @PostMapping("/chart/amount")
+    public ResponseEntity<ChartData> generateAmountChart(@RequestBody PortfolioRequest request) {
+        try {
+            validateRequest(request);
+            PortfolioReturnData portfolioData = portfolioReturnService.analyzePortfolio(request);
+            ChartData chartData = chartGenerator.generateAmountChangeChart(portfolioData);
+            return ResponseEntity.ok(chartData);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().build();
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().build();
+        }
+    }
+
+    /**
      * 분석 리포트 생성
      */
     @PostMapping("/report")

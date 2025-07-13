@@ -4,6 +4,7 @@ const API_BASE_URL = '/api/portfolio';
 // 전역 변수
 let timeSeriesChart = null;
 let comparisonChart = null;
+let amountChart = null;
 
 // DOM 요소
 const portfolioForm = document.getElementById('portfolioForm');
@@ -63,13 +64,15 @@ function getFormData() {
         .filter(ticker => ticker.length > 0);
     
     const weights = getWeightsData();
+    const initialAmount = parseFloat(document.getElementById('initialAmount').value) || 0;
     
     return {
         tickers: tickers,
         weights: weights.length > 0 ? weights : null, // 가중치가 있을 때만 포함
         startDate: document.getElementById('startDate').value,
         endDate: document.getElementById('endDate').value,
-        includeDividends: document.getElementById('includeDividends').checked
+        includeDividends: document.getElementById('includeDividends').checked,
+        initialAmount: initialAmount
     };
 }
 
@@ -200,13 +203,25 @@ function displayPortfolioSummary(portfolioData) {
 // 차트 생성
 async function createCharts(portfolioData) {
     try {
+        // 원본 요청 데이터 가져오기
+        const originalRequest = getFormData();
+        
         // 시계열 차트 데이터 가져오기
-        const timeSeriesData = await getChartData('cumulative', portfolioData);
+        const timeSeriesData = await getChartData('cumulative', originalRequest);
         createTimeSeriesChart(timeSeriesData);
         
         // 비교 차트 데이터 가져오기
-        const comparisonData = await getChartData('comparison', portfolioData);
+        const comparisonData = await getChartData('comparison', originalRequest);
         createComparisonChart(comparisonData);
+        
+        // 금액 변화 차트 생성 (초기 금액이 있는 경우)
+        if (hasAmountChanges(portfolioData)) {
+            const amountData = await getChartData('amount', originalRequest);
+            createAmountChartFromData(amountData);
+            document.getElementById('amountChartSection').style.display = 'block';
+        } else {
+            document.getElementById('amountChartSection').style.display = 'none';
+        }
         
     } catch (error) {
         console.error('차트 생성 실패:', error);
@@ -274,7 +289,7 @@ function createTimeSeriesChart(chartData) {
                     },
                     ticks: {
                         callback: function(value) {
-                            return formatPercentage(value / 100);
+                            return formatPercentage(value );
                         }
                     }
                 }
@@ -296,10 +311,49 @@ function createComparisonChart(chartData) {
         comparisonChart.destroy();
     }
     
-    // 데이터 변환
-    const tickers = Object.keys(chartData.series['Price Return'] || {});
-    const priceReturns = chartData.series['Price Return'] || [];
-    const totalReturns = chartData.series['Total Return'] || [];
+    // 데이터 구조 확인 및 변환
+    let tickers = [];
+    let priceReturns = [];
+    let totalReturns = [];
+    
+    if (chartData.series) {
+        // 백엔드에서 제공하는 라벨 정보 사용
+        if (chartData.labels && chartData.labels.length > 0) {
+            tickers = chartData.labels;
+            priceReturns = chartData.series['Price Return'] || [];
+            totalReturns = chartData.series['Total Return'] || [];
+        } else if (chartData.series['Price Return'] && chartData.series['Total Return']) {
+            // 라벨이 없는 경우 기존 로직 사용
+            if (typeof chartData.series['Price Return'] === 'object' && !Array.isArray(chartData.series['Price Return'])) {
+                tickers = Object.keys(chartData.series['Price Return']);
+                priceReturns = Object.values(chartData.series['Price Return']);
+                totalReturns = Object.values(chartData.series['Total Return']);
+            } else {
+                // 배열 형태인 경우 - 라벨 정보가 별도로 있어야 함
+                tickers = chartData.labels || [];
+                priceReturns = chartData.series['Price Return'] || [];
+                totalReturns = chartData.series['Total Return'] || [];
+            }
+        } else {
+            // 다른 구조인 경우 - 기본 처리
+            console.warn('Unexpected chart data structure:', chartData);
+            tickers = chartData.labels || [];
+            priceReturns = [];
+            totalReturns = [];
+        }
+    }
+    
+    // 데이터 검증
+    if (tickers.length === 0) {
+        console.error('No tickers found in chart data');
+        return;
+    }
+    
+    // 디버깅 로그 추가
+    console.log('Chart data:', chartData);
+    console.log('Tickers:', tickers);
+    console.log('Price returns:', priceReturns);
+    console.log('Total returns:', totalReturns);
     
     comparisonChart = new Chart(ctx, {
         type: 'bar',
@@ -351,7 +405,7 @@ function createComparisonChart(chartData) {
                     },
                     ticks: {
                         callback: function(value) {
-                            return formatPercentage(value / 100);
+                            return formatPercentage(value);
                         }
                     }
                 }
@@ -748,4 +802,179 @@ function getWeightsData() {
     });
     
     return weights;
+}
+
+// 금액 변화 데이터가 있는지 확인
+function hasAmountChanges(portfolioData) {
+    // 초기 금액이 설정되어 있는지 확인
+    const formData = getFormData();
+    return formData.initialAmount && formData.initialAmount > 0;
+}
+
+// 금액 변화 차트 생성
+function createAmountChart(portfolioData) {
+    const ctx = document.getElementById('amountChart').getContext('2d');
+    
+    // 기존 차트 제거
+    if (amountChart) {
+        amountChart.destroy();
+    }
+    
+    const datasets = portfolioData.stockReturns
+        .filter(stock => stock.amountChanges && stock.amountChanges.length > 0)
+        .map((stock, index) => ({
+            label: stock.ticker,
+            data: stock.amountChanges,
+            borderColor: getChartColor(index),
+            backgroundColor: getChartColor(index, 0.1),
+            borderWidth: 2,
+            fill: false,
+            tension: 0.2,
+            pointRadius: 1,
+            pointHoverRadius: 5,
+            pointBackgroundColor: getChartColor(index),
+            pointBorderColor: '#ffffff',
+            pointBorderWidth: 1
+        }));
+    
+    amountChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: portfolioData.stockReturns[0]?.dates?.map(date => formatDate(date)) || [],
+            datasets: datasets
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                title: {
+                    display: true,
+                    text: '포트폴리오 금액 변화'
+                },
+                legend: {
+                    display: true,
+                    position: 'top'
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            return `${context.dataset.label}: $${context.parsed.y.toLocaleString()}`;
+                        }
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    display: true,
+                    title: {
+                        display: true,
+                        text: '날짜'
+                    }
+                },
+                y: {
+                    display: true,
+                    title: {
+                        display: true,
+                        text: '금액 ($)'
+                    },
+                    ticks: {
+                        callback: function(value) {
+                            return '$' + value.toLocaleString();
+                        }
+                    }
+                }
+            },
+            interaction: {
+                intersect: false,
+                mode: 'index'
+            }
+        }
+    });
+}
+
+// 금액 변화 차트 생성 (API 데이터 사용)
+function createAmountChartFromData(chartData) {
+    const ctx = document.getElementById('amountChart').getContext('2d');
+    
+    // 기존 차트 제거
+    if (amountChart) {
+        amountChart.destroy();
+    }
+    
+    const datasets = Object.entries(chartData.series).map(([ticker, data], index) => ({
+        label: ticker,
+        data: data,
+        borderColor: getChartColor(index),
+        backgroundColor: getChartColor(index, 0.1),
+        borderWidth: 2,
+        fill: false,
+        tension: 0.2,
+        pointRadius: 1,
+        pointHoverRadius: 5,
+        pointBackgroundColor: getChartColor(index),
+        pointBorderColor: '#ffffff',
+        pointBorderWidth: 1
+    }));
+    
+    amountChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: chartData.dates ? chartData.dates.map(date => formatDate(date)) : [],
+            datasets: datasets
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                title: {
+                    display: true,
+                    text: chartData.title || '포트폴리오 금액 변화'
+                },
+                legend: {
+                    display: true,
+                    position: 'top'
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            return `${context.dataset.label}: $${context.parsed.y.toLocaleString()}`;
+                        }
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    display: true,
+                    title: {
+                        display: true,
+                        text: '날짜'
+                    }
+                },
+                y: {
+                    display: true,
+                    title: {
+                        display: true,
+                        text: '금액 ($)'
+                    },
+                    ticks: {
+                        callback: function(value) {
+                            return '$' + value.toLocaleString();
+                        }
+                    }
+                }
+            },
+            interaction: {
+                intersect: false,
+                mode: 'index'
+            }
+        }
+    });
+}
+
+// 금액 포맷팅 함수
+function formatCurrency(value) {
+    return '$' + value.toLocaleString('en-US', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+    });
 }

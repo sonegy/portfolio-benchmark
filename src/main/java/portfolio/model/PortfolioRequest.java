@@ -9,6 +9,7 @@ public class PortfolioRequest {
     private LocalDate startDate;
     private LocalDate endDate;
     private boolean includeDividends;
+    private double initialAmount = 0.0;
     
     public PortfolioRequest() {}
     
@@ -25,6 +26,14 @@ public class PortfolioRequest {
         this.startDate = startDate;
         this.endDate = endDate;
         this.includeDividends = includeDividends;
+    }
+    
+    public PortfolioRequest(List<String> tickers, LocalDate startDate, LocalDate endDate, boolean includeDividends, double initialAmount) {
+        this.tickers = tickers;
+        this.startDate = startDate;
+        this.endDate = endDate;
+        this.includeDividends = includeDividends;
+        this.initialAmount = initialAmount;
     }
     
     public List<String> getTickers() {
@@ -65,5 +74,13 @@ public class PortfolioRequest {
     
     public void setIncludeDividends(boolean includeDividends) {
         this.includeDividends = includeDividends;
+    }
+    
+    public double getInitialAmount() {
+        return initialAmount;
+    }
+    
+    public void setInitialAmount(double initialAmount) {
+        this.initialAmount = initialAmount;
     }
 }

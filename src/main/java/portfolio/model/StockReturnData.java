@@ -10,6 +10,7 @@ public class StockReturnData {
     private double cagr;
     private List<Double> cumulativeReturns;
     private List<LocalDate> dates;
+    private List<Double> amountChanges;
     
     public StockReturnData() {}
     
@@ -66,5 +67,13 @@ public class StockReturnData {
     
     public void setDates(List<LocalDate> dates) {
         this.dates = dates;
+    }
+    
+    public List<Double> getAmountChanges() {
+        return amountChanges;
+    }
+    
+    public void setAmountChanges(List<Double> amountChanges) {
+        this.amountChanges = amountChanges;
     }
 }
