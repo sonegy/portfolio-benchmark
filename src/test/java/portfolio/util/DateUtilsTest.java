@@ -1,11 +1,15 @@
 package portfolio.util;
 
 import org.junit.jupiter.api.Test;
+
+import lombok.extern.slf4j.Slf4j;
+
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+@Slf4j
 class DateUtilsTest {
 
     @Test
@@ -49,4 +53,11 @@ class DateUtilsTest {
         long expected = DateUtils.toUnixTimestamp(LocalDate.now().minusDays(daysAgo));
         assertEquals(expected, sevenDaysAgo);
     }
+
+    @Test
+    void test() {
+        log.info("{}", DateUtils.toLocalDate(1420088400));
+    }
+
+
 }

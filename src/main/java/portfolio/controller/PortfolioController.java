@@ -12,6 +12,8 @@ import portfolio.service.ChartGenerator;
 import portfolio.service.PortfolioReturnService;
 import portfolio.service.ReportGenerator;
 
+import java.time.LocalDate;
+
 /**
  * 포트폴리오 분석 REST API 엔드포인트를 제공하는 컨트롤러
  */
@@ -38,6 +40,7 @@ public class PortfolioController {
      */
     @PostMapping("/analyze")
     public ResponseEntity<PortfolioReturnData> analyzePortfolio(@RequestBody PortfolioRequest request) {
+        adjustToPreviousMonthLastDay(request);
         validateRequest(request);
         PortfolioReturnData result = portfolioReturnService.analyzePortfolio(request);
         return ResponseEntity.ok(result);
@@ -48,6 +51,7 @@ public class PortfolioController {
      */
     @PostMapping("/chart/timeseries")
     public ResponseEntity<ChartData> generateTimeSeriesChart(@RequestBody PortfolioRequest request) {
+        adjustToPreviousMonthLastDay(request);
         validateRequest(request);
         PortfolioReturnData portfolioData = portfolioReturnService.analyzePortfolio(request);
         ChartData chartData = chartGenerator.generateTimeSeriesChart(portfolioData);
@@ -59,6 +63,7 @@ public class PortfolioController {
      */
     @PostMapping("/chart/comparison")
     public ResponseEntity<ChartData> generateComparisonChart(@RequestBody PortfolioRequest request) {
+        adjustToPreviousMonthLastDay(request);
         validateRequest(request);
         PortfolioReturnData portfolioData = portfolioReturnService.analyzePortfolio(request);
         ChartData chartData = chartGenerator.generateComparisonChart(portfolioData);
@@ -70,6 +75,7 @@ public class PortfolioController {
      */
     @PostMapping("/chart/cumulative")
     public ResponseEntity<ChartData> generateCumulativeChart(@RequestBody PortfolioRequest request) {
+        adjustToPreviousMonthLastDay(request);
         validateRequest(request);
         PortfolioReturnData portfolioData = portfolioReturnService.analyzePortfolio(request);
         ChartData chartData = chartGenerator.generateCumulativeReturnChart(portfolioData);
@@ -81,6 +87,7 @@ public class PortfolioController {
      */
     @PostMapping("/chart/amount")
     public ResponseEntity<ChartData> generateAmountChart(@RequestBody PortfolioRequest request) {
+        adjustToPreviousMonthLastDay(request);
         validateRequest(request);
         PortfolioReturnData portfolioData = portfolioReturnService.analyzePortfolio(request);
         ChartData chartData = chartGenerator.generateAmountChangeChart(portfolioData);
@@ -92,6 +99,7 @@ public class PortfolioController {
      */
     @PostMapping("/report")
     public ResponseEntity<AnalysisReport> generateReport(@RequestBody PortfolioRequest request) {
+        adjustToPreviousMonthLastDay(request);
         validateRequest(request);
         PortfolioReturnData portfolioData = portfolioReturnService.analyzePortfolio(request);
         AnalysisReport report = reportGenerator.generateReport(request, portfolioData);
@@ -109,6 +117,20 @@ public class PortfolioController {
     /**
      * 요청 유효성 검증
      */
+    void adjustToPreviousMonthLastDay(PortfolioRequest request) {
+        if (request.getStartDate() != null && request.getEndDate() != null) {
+            LocalDate start = request.getStartDate();
+            LocalDate end = request.getEndDate();
+            // 년월만 입력된 것으로 간주: start와 end가 같고, 일자가 1일
+            if (start.equals(end) && start.getDayOfMonth() == 1) {
+                LocalDate firstDay = start.withDayOfMonth(1);
+                LocalDate lastDay = start.withDayOfMonth(start.lengthOfMonth());
+                request.setStartDate(firstDay);
+                request.setEndDate(lastDay);
+            }
+        }
+    }
+
     private void validateRequest(PortfolioRequest request) {
         if (request == null) {
             throw new IllegalArgumentException("Request cannot be null");

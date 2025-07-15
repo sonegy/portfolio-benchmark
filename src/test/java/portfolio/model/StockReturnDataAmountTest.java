@@ -31,7 +31,7 @@ class StockReturnDataAmountTest {
         List<Double> amountChanges = List.of(10000.0, 11500.0, 11800.0);
 
         // When
-        StockReturnData stockData = new StockReturnData(ticker, priceReturn, totalReturn, cagr);
+        StockReturnData stockData = new StockReturnData(ticker, priceReturn, totalReturn, cagr, 0.0);
         stockData.setAmountChanges(amountChanges);
 
         // Then

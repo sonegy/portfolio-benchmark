@@ -1,7 +1,8 @@
 package portfolio.service;
 
-import org.assertj.core.util.DateUtil;
 import org.junit.jupiter.api.Test;
+import org.springframework.test.context.ActiveProfiles;
+
 import static org.junit.jupiter.api.Assertions.*;
 import static portfolio.util.DateUtils.toUnixTimestamp;
 
@@ -10,7 +11,63 @@ import java.time.ZoneOffset;
 import java.util.List;
 import portfolio.api.ChartResponse.Dividend;
 
+@ActiveProfiles("test")
 class ReturnCalculatorTest {
+
+    @Test
+    void shouldCalculateVolatilityWithoutDividends() {
+        // Given
+        ReturnCalculator calculator = new ReturnCalculator();
+        List<Double> prices = List.of(100.0, 110.0, 121.0); // 월별 가격
+        List<Long> timestamps = List.of(
+            toUnixTimestamp(LocalDate.of(2023, 1, 1)),
+            toUnixTimestamp(LocalDate.of(2023, 2, 1)),
+            toUnixTimestamp(LocalDate.of(2023, 3, 1))
+        );
+        List<Dividend> dividends = List.of();
+
+        // When
+        List<Double> returns = calculator.calculateReturn(prices, timestamps, dividends);
+        double volatility = calculator.calculateVolatility(returns);
+
+        // Then
+        // 월별 수익률: (110-100)/100=0.1, (121-110)/110=0.1
+        // 평균: 0.1
+        // 분산: ((0.1-0.1)^2 + (0.1-0.1)^2)/2 = 0
+        // 표준편차: 0
+        assertEquals(0.0, volatility, 0.0001);
+    }
+
+    @Test
+    void shouldCalculateVolatilityWithDividends() {
+        // Given
+        ReturnCalculator calculator = new ReturnCalculator();
+        List<Double> prices = List.of(100.0, 110.0, 108.0);
+        List<Long> timestamps = List.of(
+            toUnixTimestamp(LocalDate.of(2023, 1, 1)),
+            toUnixTimestamp(LocalDate.of(2023, 2, 1)),
+            toUnixTimestamp(LocalDate.of(2023, 3, 1))
+        );
+        Dividend dividend = new Dividend();
+        dividend.setAmount(2.0);
+        dividend.setDate(toUnixTimestamp(LocalDate.of(2023, 2, 3)));
+        List<Dividend> dividends = List.of(dividend);
+
+        // When
+        List<Double> returns = calculator.calculateReturn(prices, timestamps, dividends);
+        double volatility = calculator.calculateVolatility(returns);
+
+        // Then
+        // 수익률 수동 계산:
+        // 1. 첫달: 100→110, 배당 없음. 수익률 = (110-100)/100 = 0.1
+        // 2. 둘째달: 110→108, 배당 2.0 재투자. 현금 2.0/108=0.018518...주 추가, 총 1.018518...주
+        // 가치: 1.018518...*108=110
+        // 수익률: (110-110)/110 = 0
+        // 평균: (0.1+0)/2=0.05
+        // 분산: ((0.1-0.05)^2 + (0-0.05)^2)/2 = (0.0025+0.0025)/2=0.0025
+        // 표준편차: sqrt(0.0025)=0.05
+        assertEquals(0.05, volatility, 0.0001);
+    }
 
     @Test
     void shouldCalculatePriceReturnForTwoPrices() {

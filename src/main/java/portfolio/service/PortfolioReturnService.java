@@ -143,7 +143,7 @@ public class PortfolioReturnService {
 
         if (prices.isEmpty()) {
             log.error("{} prices is Empty", ticker);
-            return new StockReturnData(ticker, 0.0, 0.0, 0.0);
+            return new StockReturnData(ticker, 0.0, 0.0, 0.0, 0.0);
         }
 
         // Calculate returns
@@ -155,14 +155,23 @@ public class PortfolioReturnService {
 
         // Calculate CAGR using actual time period
         double startPrice = prices.get(0);
-        double endPrice = prices.get(prices.size() - 1);
-        int years = calculateYearsBetweenPrices(chartResponse);
-        double cagr = years > 0 ? returnCalculator.calculateCAGR(startPrice, endPrice, years) : 0.0;
+        double endPrice = startPrice * (includeDividends
+                ? totalReturn
+                : priceReturn) + startPrice;
+        // prices.get(prices.size() - 1);
+        log.debug("calculateStockReturn.startPrice:{} endPrice:{}", startPrice, endPrice);
 
-        StockReturnData stockReturnData = new StockReturnData(ticker, priceReturn, totalReturn, cagr);
+        double years = calculateYearsBetweenPrices(chartResponse);
+        double cagr = years > 0 ? returnCalculator.calculateCAGR(startPrice, endPrice, years) : 0.0;
+        List<Double> intervalReturns = returnCalculator.calculateReturn(prices, timestamps, dividends);
+        double volatility = returnCalculator.calculateVolatility(intervalReturns);
+        log.debug("calculateStockReturn.ticker:{} volatility:{}", ticker, volatility);
+
+        StockReturnData stockReturnData = new StockReturnData(ticker, priceReturn, totalReturn, cagr, volatility);
         stockReturnData
                 .setCumulativeReturns(returnCalculator.calculateCumulativeReturns(prices, timestamps, dividends));
         stockReturnData.setDates(extractDates(chartResponse));
+        stockReturnData.setIntervalReturns(intervalReturns);
 
         // Calculate amount changes if initial amount is provided
         if (initialAmount > 0) {
@@ -174,7 +183,7 @@ public class PortfolioReturnService {
         return stockReturnData;
     }
 
-    private int calculateYearsBetweenPrices(ChartResponse chartResponse) {
+    private double calculateYearsBetweenPrices(ChartResponse chartResponse) {
         ChartResponse.Result result = getFirstResult(chartResponse);
         if (result == null || result.getTimestamp() == null || result.getTimestamp().size() < 2) {
             return 1; // Default to 1 year if timestamps are not available
@@ -187,7 +196,7 @@ public class PortfolioReturnService {
         long secondsInYear = 365L * 24L * 60L * 60L;
         long yearsDifference = (endTimestamp - startTimestamp) / secondsInYear;
 
-        return Math.max(1, (int) yearsDifference); // At least 1 year
+        return Math.max(1, yearsDifference); // At least 1 year
     }
 
     private List<Double> extractPrices(ChartResponse chartResponse) {

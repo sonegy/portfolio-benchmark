@@ -16,8 +16,6 @@ public class IntervalCalculator {
         // 1d interval: 1일마다 1개 포인트 → 50일까지
         // 5d interval: 5일마다 1개 포인트 → 250일까지 (50 * 5)
         // 1mo interval: 30일마다 1개 포인트 → 1500일까지 (50 * 30)
-        // 3mo interval: 90일마다 1개 포인트 → 4500일까지 (50 * 90)
-        
         if (periodInDays <= 50) {
             return "1d";
         } else if (periodInDays <= 250) {

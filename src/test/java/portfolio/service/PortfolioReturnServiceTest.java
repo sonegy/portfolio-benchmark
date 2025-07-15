@@ -144,7 +144,7 @@ class PortfolioReturnServiceTest {
                 .thenReturn(CompletableFuture.completedFuture(stockData));
         when(returnCalculator.calculatePriceReturn(anyList())).thenReturn(0.15);
         when(returnCalculator.calculateTotalReturn(anyList(), anyList(), anyList())).thenReturn(0.15);
-        when(returnCalculator.calculateCAGR(anyDouble(), anyDouble(), anyInt())).thenReturn(0.15);
+        when(returnCalculator.calculateCAGR(anyDouble(), anyDouble(), anyDouble())).thenReturn(0.15);
 
         // When
         PortfolioReturnData result = portfolioReturnService.analyzePortfolio(request);

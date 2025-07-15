@@ -46,19 +46,40 @@ public class PortfolioAnalyzer {
         return weightedReturn;
     }
     
+    /**
+     * 각 ticker별 intervalReturns와 비중을 이용해 포트폴리오의 변동성(표준편차)을 계산한다.
+     * 1. 모든 ticker의 intervalReturns 길이가 같다고 가정한다.
+     * 2. 각 기간별 포트폴리오 수익률 시계열을 만든다.
+     * 3. 그 시계열의 표준편차를 반환한다.
+     *
+     * @param stockReturns 각 ticker별 수익률 데이터 (intervalReturns 필드 활용)
+     * @param weights      각 ticker별 비중
+     * @return 포트폴리오 변동성(표준편차)
+     */
     public double calculateVolatility(List<StockReturnData> stockReturns, List<Double> weights) {
-        List<Double> finalWeights = getFinalWeights(stockReturns.size(), weights);
-        
-        double portfolioMeanReturn = calculatePortfolioTotalReturn(stockReturns, weights);
-
-        double variance = 0.0;
-        for (int i = 0; i < stockReturns.size(); i++) {
-            variance += finalWeights.get(i) * Math.pow(stockReturns.get(i).getTotalReturn() - portfolioMeanReturn, 2);
+        if (stockReturns.isEmpty() || weights.isEmpty()) {
+            throw new IllegalArgumentException("stockReturns, weights must not be empty");
         }
-
-        // This is a simplified variance calculation. A more accurate calculation would involve covariances.
-        // For now, we use the weighted average of individual variances from the mean portfolio return.
-        
+        List<Double> finalWeights = getFinalWeights(stockReturns.size(), weights);
+        int n = stockReturns.size();
+        int periods = stockReturns.get(0).getIntervalReturns().size();
+        // 각 ticker의 intervalReturns 길이 체크
+        for (StockReturnData srd : stockReturns) {
+            if (srd.getIntervalReturns().size() != periods)
+                throw new IllegalArgumentException("All intervalReturns must have the same length");
+        }
+        // 각 기간별 포트폴리오 수익률 시계열 계산
+        List<Double> portfolioReturns = new ArrayList<>();
+        for (int t = 0; t < periods; t++) {
+            double r = 0.0;
+            for (int i = 0; i < n; i++) {
+                r += finalWeights.get(i) * stockReturns.get(i).getIntervalReturns().get(t);
+            }
+            portfolioReturns.add(r);
+        }
+        // 표준편차 계산
+        double mean = portfolioReturns.stream().mapToDouble(Double::doubleValue).average().orElse(0.0);
+        double variance = portfolioReturns.stream().mapToDouble(r -> Math.pow(r - mean, 2)).average().orElse(0.0);
         return Math.sqrt(variance);
     }
 

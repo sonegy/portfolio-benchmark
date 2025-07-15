@@ -22,7 +22,7 @@
     </appender>
     
     <!-- Portfolio package logger - DEBUG level -->
-    <logger name="portfolio" level="DEBUG" additivity="false">
+    <logger name="portfolio" level="DEBUG">
         <appender-ref ref="CONSOLE"/>
         <appender-ref ref="FILE"/>
     </logger>

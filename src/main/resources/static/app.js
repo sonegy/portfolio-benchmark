@@ -64,6 +64,11 @@ async function handleFormSubmit(event) {
 }
 
 // 폼 데이터 수집
+function normalizeMonthInput(value) {
+    // YYYY-MM이면 YYYY-MM-01로 변환, 아니면 그대로 반환
+    return /^\d{4}-\d{2}$/.test(value) ? value + "-01" : value;
+}
+
 function getFormData() {
     const tickers = document.getElementById('tickers').value
         .split(',')
@@ -76,8 +81,8 @@ function getFormData() {
     return {
         tickers: tickers,
         weights: weights.length > 0 ? weights : null, // 가중치가 있을 때만 포함
-        startDate: document.getElementById('startDate').value,
-        endDate: document.getElementById('endDate').value,
+        startDate: normalizeMonthInput(document.getElementById('startDate').value),
+        endDate: normalizeMonthInput(document.getElementById('endDate').value),
         includeDividends: document.getElementById('includeDividends').checked,
         initialAmount: initialAmount
     };

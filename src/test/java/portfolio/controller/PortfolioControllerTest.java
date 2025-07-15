@@ -58,8 +58,8 @@ class PortfolioControllerTest {
         sampleRequest.setIncludeDividends(true);
 
         // 샘플 포트폴리오 데이터
-        StockReturnData appleData = new StockReturnData("AAPL", 0.15, 0.18, 0.12);
-        StockReturnData microsoftData = new StockReturnData("MSFT", 0.12, 0.14, 0.10);
+        StockReturnData appleData = new StockReturnData("AAPL", 0.15, 0.18, 0.12, 0.0);
+        StockReturnData microsoftData = new StockReturnData("MSFT", 0.12, 0.14, 0.10, 0.0);
         
         samplePortfolioData = new PortfolioReturnData(List.of(appleData, microsoftData));
         samplePortfolioData.setPortfolioPriceReturn(0.135);
@@ -184,4 +184,32 @@ class PortfolioControllerTest {
                 .content(objectMapper.writeValueAsString(sampleRequest)))
                 .andExpect(status().isInternalServerError());
     }
+
+    @Test
+    void shouldSetStartToFirstDayAndEndToLastDayOfMonthWhenGivenYearMonth() throws Exception {
+        // Given: 사용자가 2024년 7월을 선택했다고 가정 (년월만 입력)
+        PortfolioRequest yearMonthRequest = new PortfolioRequest();
+        yearMonthRequest.setTickers(List.of("AAPL"));
+        yearMonthRequest.setStartDate(LocalDate.of(2024, 7, 1));
+        yearMonthRequest.setEndDate(LocalDate.of(2024, 7, 1));
+        yearMonthRequest.setIncludeDividends(true);
+
+        // Mock: 서비스가 내부적으로 2024-07-01 ~ 2024-07-31을 사용했는지 검증
+        when(portfolioReturnService.analyzePortfolio(any(PortfolioRequest.class)))
+            .then(invocation -> {
+                PortfolioRequest req = invocation.getArgument(0);
+                LocalDate expectedStart = LocalDate.of(2024, 7, 1);
+                LocalDate expectedEnd = LocalDate.of(2024, 7, 31);
+                org.assertj.core.api.Assertions.assertThat(req.getStartDate()).isEqualTo(expectedStart);
+                org.assertj.core.api.Assertions.assertThat(req.getEndDate()).isEqualTo(expectedEnd);
+                return samplePortfolioData;
+            });
+
+        // When & Then
+        mockMvc.perform(post("/api/portfolio/analyze")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(yearMonthRequest)))
+                .andExpect(status().isOk());
+    }
+
 }

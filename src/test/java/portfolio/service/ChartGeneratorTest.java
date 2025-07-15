@@ -22,7 +22,7 @@ class ChartGeneratorTest {
         chartGenerator = new ChartGenerator(new ChartConfigurationService());
         
         // 샘플 데이터 생성
-        StockReturnData appleData = new StockReturnData("AAPL", 0.15, 0.18, 0.12);
+        StockReturnData appleData = new StockReturnData("AAPL", 0.15, 0.18, 0.12, 0.0);
         appleData.setCumulativeReturns(List.of(1.0, 1.05, 1.10, 1.15));
         appleData.setDates(List.of(
             LocalDate.of(2023, 1, 1),
@@ -31,7 +31,7 @@ class ChartGeneratorTest {
             LocalDate.of(2023, 10, 1)
         ));
 
-        StockReturnData microsoftData = new StockReturnData("MSFT", 0.12, 0.14, 0.10);
+        StockReturnData microsoftData = new StockReturnData("MSFT", 0.12, 0.14, 0.10, 0.0);
         microsoftData.setCumulativeReturns(List.of(1.0, 1.03, 1.08, 1.12));
         microsoftData.setDates(List.of(
             LocalDate.of(2023, 1, 1),

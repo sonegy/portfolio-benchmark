@@ -35,29 +35,51 @@ public class PortfolioAnalyzerTest {
     }
     
     @Test
-    void shouldCalculateVolatility() {
-        // Given
-        List<StockReturnData> returns = Arrays.asList(
-                new StockReturnData("A", 0.10, 0.10, 0),
-                new StockReturnData("B", 0.05, 0.05, 0),
-                new StockReturnData("C", -0.02, -0.02, 0),
-                new StockReturnData("D", 0.08, 0.08, 0),
-                new StockReturnData("E", 0.12, 0.12, 0)
-        );
-        List<Double> weights = Arrays.asList(0.2, 0.2, 0.2, 0.2, 0.2);
+    void shouldCalculatePortfolioVolatilityWithIntervalReturns() {
+        // Given: 2종목, 3기간, 각 기간별 수익률 명시
+        StockReturnData a = new StockReturnData("A", 0, 0, 0, 0.0);
+        a.setIntervalReturns(Arrays.asList(0.1, 0.2, 0.05));
+        StockReturnData b = new StockReturnData("B", 0, 0, 0, 0.0);
+        b.setIntervalReturns(Arrays.asList(0.0, 0.1, -0.05));
+        List<StockReturnData> stocks = Arrays.asList(a, b);
+        List<Double> weights = Arrays.asList(0.6, 0.4);
 
-        // When
-        double volatility = portfolioAnalyzer.calculateVolatility(returns, weights);
+        // When: 각 기간별 포트폴리오 수익률 = 0.6*A + 0.4*B
+        // t0: 0.6*0.1 + 0.4*0.0 = 0.06
+        // t1: 0.6*0.2 + 0.4*0.1 = 0.16
+        // t2: 0.6*0.05 + 0.4*(-0.05) = 0.03 - 0.02 = 0.01
+        // 평균: (0.06+0.16+0.01)/3 = 0.076666...
+        // 분산: ((0.06-0.0767)^2 + (0.16-0.0767)^2 + (0.01-0.0767)^2)/3
+        // = (0.000277 + 0.006922 + 0.004460)/3 = 0.003886
+        // 표준편차: sqrt(0.003886) = 0.06236
+        double volatility = portfolioAnalyzer.calculateVolatility(stocks, weights);
 
-        // Then
-        // Manual calculation:
-        // Mean = (0.10 + 0.05 + (-0.02) + 0.08 + 0.12) / 5 = 0.33 / 5 = 0.066
-        // Weighted Variance = 0.2 * (0.10-0.066)² + 0.2 * (0.05-0.066)² + 0.2 * (-0.02-0.066)² + 0.2 * (0.08-0.066)² + 0.2 * (0.12-0.066)²
-        // Weighted Variance = 0.2 * 0.001156 + 0.2 * 0.000256 + 0.2 * 0.007396 + 0.2 * 0.000196 + 0.2 * 0.002916
-        // Weighted Variance = 0.0002312 + 0.0000512 + 0.0014792 + 0.0000392 + 0.0005832 = 0.002384
-        // Standard deviation = sqrt(0.002384) = 0.048826
-        assertTrue(volatility > 0);
-        assertEquals(0.048826, volatility, 0.00001);
+        assertEquals(0.06236, volatility, 0.0001);
+    }
+
+    @Test
+    void shouldCalculatePortfolioVolatilityWithMultipleStocks() {
+        // Given: 3종목, 4기간
+        StockReturnData a = new StockReturnData("A", 0, 0, 0, 0.0);
+        a.setIntervalReturns(Arrays.asList(0.05, 0.07, 0.10, 0.02));
+        StockReturnData b = new StockReturnData("B", 0, 0, 0, 0.0);
+        b.setIntervalReturns(Arrays.asList(0.03, 0.06, -0.02, 0.01));
+        StockReturnData c = new StockReturnData("C", 0, 0, 0, 0.0);
+        c.setIntervalReturns(Arrays.asList(-0.01, 0.04, 0.08, 0.00));
+        List<StockReturnData> stocks = Arrays.asList(a, b, c);
+        List<Double> weights = Arrays.asList(0.5, 0.3, 0.2);
+
+        // When: 각 기간별 포트폴리오 수익률 계산
+        // t0: 0.5*0.05 + 0.3*0.03 + 0.2*(-0.01) = 0.025 + 0.009 - 0.002 = 0.032
+        // t1: 0.5*0.07 + 0.3*0.06 + 0.2*0.04 = 0.035 + 0.018 + 0.008 = 0.061
+        // t2: 0.5*0.10 + 0.3*(-0.02) + 0.2*0.08 = 0.05 - 0.006 + 0.016 = 0.06
+        // t3: 0.5*0.02 + 0.3*0.01 + 0.2*0.00 = 0.01 + 0.003 + 0.0 = 0.013
+        // 평균: (0.032+0.061+0.06+0.013)/4 = 0.0415
+        // 분산: ((0.032-0.0415)^2 + (0.061-0.0415)^2 + (0.06-0.0415)^2 + (0.013-0.0415)^2)/4
+        // = (0.00009025 + 0.00038025 + 0.00034225 + 0.00081225)/4 = 0.00040675
+        // 표준편차: sqrt(0.00040675) = 0.02017
+        double volatility = portfolioAnalyzer.calculateVolatility(stocks, weights);
+        assertEquals(0.02017, volatility, 0.0001);
     }
     
     @Test
