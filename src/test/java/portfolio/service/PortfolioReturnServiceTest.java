@@ -114,7 +114,7 @@ class PortfolioReturnServiceTest {
         when(portfolioDataService.fetchMultipleDividends(anyList(), anyLong(), anyLong()))
                 .thenReturn(CompletableFuture.completedFuture(mockDividendData));
         when(returnCalculator.calculatePriceReturn(anyList())).thenReturn(0.10);
-        when(returnCalculator.calculateTotalReturn(anyList(), anyList())).thenReturn(0.12);
+        when(returnCalculator.calculateTotalReturn(anyList(), anyList(), anyList())).thenReturn(0.12);
         when(returnCalculator.calculateCAGR(anyDouble(), anyDouble(), anyInt())).thenReturn(0.11);
 
         // When
@@ -143,7 +143,7 @@ class PortfolioReturnServiceTest {
         when(portfolioDataService.fetchMultipleStocks(anyList(), anyLong(), anyLong()))
                 .thenReturn(CompletableFuture.completedFuture(stockData));
         when(returnCalculator.calculatePriceReturn(anyList())).thenReturn(0.15);
-        when(returnCalculator.calculateTotalReturn(anyList(), anyList())).thenReturn(0.15);
+        when(returnCalculator.calculateTotalReturn(anyList(), anyList(), anyList())).thenReturn(0.15);
         when(returnCalculator.calculateCAGR(anyDouble(), anyDouble(), anyInt())).thenReturn(0.15);
 
         // When
@@ -166,11 +166,11 @@ class PortfolioReturnServiceTest {
         ChartResponse.Chart chart = new ChartResponse.Chart();
         ChartResponse.Result result = new ChartResponse.Result();
         ChartResponse.Indicators indicators = new ChartResponse.Indicators();
-        ChartResponse.AdjClose adjClose = new ChartResponse.AdjClose();
+        ChartResponse.Quote quote = new ChartResponse.Quote();
 
         // Mock price data
-        adjClose.setAdjclose(Arrays.asList(100.0, 110.0, 115.0));
-        indicators.setAdjclose(Arrays.asList(adjClose));
+        quote.setClose(Arrays.asList(100.0, 110.0, 115.0));
+        indicators.setQuote(Arrays.asList(quote));
         result.setIndicators(indicators);
         chart.setResult(Arrays.asList(result));
         response.setChart(chart);
@@ -238,5 +238,47 @@ class PortfolioReturnServiceTest {
 
         // Then
         assertTrue(dates.isEmpty());
+    }
+
+    @Test
+    void shouldThrowExceptionWhenStockDataHasDifferentStartDates() {
+        // Given
+        PortfolioRequest request = new PortfolioRequest(
+                Arrays.asList("AAPL", "GOOGL"),
+                LocalDate.of(2023, 1, 1),
+                LocalDate.of(2023, 12, 31),
+                true);
+
+        Map<String, ChartResponse> mockData = new HashMap<>();
+        // Timestamps for 2023-01-01 (1672531200) and 2023-02-01 (1675209600) in UTC
+        mockData.put("AAPL", createMockChartResponseWithTimestamp(1672531200L, Arrays.asList(100.0, 110.0)));
+        mockData.put("GOOGL", createMockChartResponseWithTimestamp(1675209600L, Arrays.asList(200.0, 210.0)));
+
+        when(portfolioDataService.fetchMultipleDividends(anyList(), anyLong(), anyLong()))
+                .thenReturn(CompletableFuture.completedFuture(mockData));
+
+        // When & Then
+        IllegalArgumentException exception = assertThrows(
+                IllegalArgumentException.class,
+                () -> portfolioReturnService.analyzePortfolio(request));
+
+        assertEquals("Stock data has different start dates. Please align them. The latest start date is 2023-02-01.",
+                exception.getMessage());
+    }
+
+    private ChartResponse createMockChartResponseWithTimestamp(long startTimestamp, java.util.List<Double> prices) {
+        ChartResponse response = new ChartResponse();
+        ChartResponse.Chart chart = new ChartResponse.Chart();
+        ChartResponse.Result result = new ChartResponse.Result();
+        ChartResponse.Indicators indicators = new ChartResponse.Indicators();
+        ChartResponse.Quote quote = new ChartResponse.Quote();
+
+        quote.setClose(prices);
+        indicators.setQuote(Arrays.asList(quote));
+        result.setIndicators(indicators);
+        result.setTimestamp(Arrays.asList(startTimestamp, startTimestamp + 86400L * 30)); // approx 1 month later
+        chart.setResult(Arrays.asList(result));
+        response.setChart(chart);
+        return response;
     }
 }

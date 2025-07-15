@@ -89,6 +89,28 @@ public class PortfolioAnalyzer {
         return weightedCagr;
     }
 
+    public List<Double> calculatePortfolioCumulativeReturns(List<StockReturnData> stockReturns, List<Double> weights) {
+        if (stockReturns == null || stockReturns.isEmpty()) {
+            return new ArrayList<>();
+        }
+
+        List<Double> finalWeights = getFinalWeights(stockReturns.size(), weights);
+
+        // Assuming all stocks have the same length of cumulative returns data
+        int numDataPoints = stockReturns.get(0).getCumulativeReturns().size();
+        List<Double> portfolioCumulativeReturns = new ArrayList<>();
+
+        for (int i = 0; i < numDataPoints; i++) {
+            double dailyPortfolioReturn = 0.0;
+            for (int j = 0; j < stockReturns.size(); j++) {
+                dailyPortfolioReturn += stockReturns.get(j).getCumulativeReturns().get(i) * finalWeights.get(j);
+            }
+            portfolioCumulativeReturns.add(dailyPortfolioReturn);
+        }
+
+        return portfolioCumulativeReturns;
+    }
+
     private List<Double> getFinalWeights(int numStocks, List<Double> weights) {
         if (weights != null && !weights.isEmpty()) {
             if (weights.size() != numStocks) {

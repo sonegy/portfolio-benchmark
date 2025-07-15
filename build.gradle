@@ -37,10 +37,8 @@ dependencies {
 
     // --- 테스트 ---
     testImplementation 'org.springframework.boot:spring-boot-starter-test'   // JUnit5, Mockito 등 포함
-    testImplementation 'org.junit.jupiter:junit-jupiter:5.10.2'
     testImplementation 'org.mockito:mockito-core:5.2.0'
-    testImplementation 'org.springframework.cloud:spring-cloud-contract-wiremock' // WireMock 통합
-    testImplementation 'org.springframework.cloud:spring-cloud-starter-contract-stub-runner'
+    testImplementation 'org.springframework.cloud:spring-cloud-contract-wiremock'
 }
 
 test {

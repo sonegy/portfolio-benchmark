@@ -9,6 +9,7 @@ public class PortfolioReturnData {
     private double portfolioCAGR;
     private double volatility;
     private double sharpeRatio;
+    private List<Double> portfolioCumulativeReturns;
     
     public PortfolioReturnData() {}
     
@@ -64,4 +65,11 @@ public class PortfolioReturnData {
         this.sharpeRatio = sharpeRatio;
     }
     
+    public List<Double> getPortfolioCumulativeReturns() {
+        return portfolioCumulativeReturns;
+    }
+    
+    public void setPortfolioCumulativeReturns(List<Double> portfolioCumulativeReturns) {
+        this.portfolioCumulativeReturns = portfolioCumulativeReturns;
+    }
 }

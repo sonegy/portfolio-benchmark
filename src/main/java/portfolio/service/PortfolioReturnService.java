@@ -43,9 +43,11 @@ public class PortfolioReturnService {
         long period1 = DateUtils.toUnixTimestamp(request.getStartDate());
         long period2 = DateUtils.toUnixTimestamp(request.getEndDate());
         boolean includeDividends = request.isIncludeDividends();
+        log.debug("analyzePortfolio request:{}", JsonLoggingUtils.toJsonPretty(request));
 
         // Fetch stock data
         Map<String, ChartResponse> stockData = fetchStockData(request.getTickers(), period1, period2, includeDividends);
+        validateStockDataConsistency(stockData);
         Set<Entry<String, ChartResponse>> entrySet = stockData.entrySet();
         for (Entry<String, ChartResponse> entry : entrySet) {
             String key = entry.getKey();
@@ -73,6 +75,36 @@ public class PortfolioReturnService {
         }
     }
 
+    private void validateStockDataConsistency(Map<String, ChartResponse> stockData) {
+        if (stockData.size() <= 1) {
+            return;
+        }
+
+        Optional<LocalDate> latestStartDateOpt = stockData.values().stream()
+                .map(this::extractTimestamps)
+                .filter(timestamps -> !timestamps.isEmpty())
+                .map(timestamps -> DateUtils.toLocalDate(timestamps.get(0)))
+                .max(LocalDate::compareTo);
+
+        if (latestStartDateOpt.isEmpty()) {
+            return; // No data with timestamps found
+        }
+
+        LocalDate latestStartDate = latestStartDateOpt.get();
+
+        boolean allMatch = stockData.values().stream()
+                .map(this::extractTimestamps)
+                .filter(timestamps -> !timestamps.isEmpty())
+                .map(timestamps -> DateUtils.toLocalDate(timestamps.get(0)))
+                .allMatch(latestStartDate::equals);
+
+        if (!allMatch) {
+            throw new IllegalArgumentException(
+                    "Stock data has different start dates. Please align them. The latest start date is "
+                            + latestStartDate + ".");
+        }
+    }
+
     private Map<String, ChartResponse> fetchStockData(List<String> tickers, long period1, long period2,
             boolean includeDividends) {
         CompletableFuture<Map<String, ChartResponse>> future;
@@ -88,22 +120,26 @@ public class PortfolioReturnService {
             Map<String, ChartResponse> stockData) {
         List<StockReturnData> stockReturns = new ArrayList<>();
         List<Double> weights = request.getWeights();
-        
+
         for (int i = 0; i < request.getTickers().size(); i++) {
             String ticker = request.getTickers().get(i);
             ChartResponse chartResponse = stockData.get(ticker);
             if (chartResponse != null) {
-                double weight = (weights != null && i < weights.size()) ? weights.get(i) : 1.0 / request.getTickers().size();
-                StockReturnData stockReturn = calculateStockReturn(ticker, chartResponse, request.isIncludeDividends(), request.getInitialAmount(), weight);
+                double weight = (weights != null && i < weights.size()) ? weights.get(i)
+                        : 1.0 / request.getTickers().size();
+                StockReturnData stockReturn = calculateStockReturn(ticker, chartResponse, request.isIncludeDividends(),
+                        request.getInitialAmount(), weight);
                 stockReturns.add(stockReturn);
             }
         }
         return stockReturns;
     }
 
-    private StockReturnData calculateStockReturn(String ticker, ChartResponse chartResponse, boolean includeDividends, double initialAmount, double weight) {
-        // Extract prices from chart response
+    private StockReturnData calculateStockReturn(String ticker, ChartResponse chartResponse, boolean includeDividends,
+            double initialAmount, double weight) {
+        // Extract prices and timestamps from chart response
         List<Double> prices = extractPrices(chartResponse);
+        List<Long> timestamps = extractTimestamps(chartResponse);
 
         if (prices.isEmpty()) {
             log.error("{} prices is Empty", ticker);
@@ -114,7 +150,7 @@ public class PortfolioReturnService {
         double priceReturn = returnCalculator.calculatePriceReturn(prices);
         List<Dividend> dividends = extractDividends(chartResponse);
         double totalReturn = includeDividends
-                ? returnCalculator.calculateTotalReturn(prices, dividends)
+                ? returnCalculator.calculateTotalReturn(prices, timestamps, dividends)
                 : priceReturn;
 
         // Calculate CAGR using actual time period
@@ -124,15 +160,17 @@ public class PortfolioReturnService {
         double cagr = years > 0 ? returnCalculator.calculateCAGR(startPrice, endPrice, years) : 0.0;
 
         StockReturnData stockReturnData = new StockReturnData(ticker, priceReturn, totalReturn, cagr);
-        stockReturnData.setCumulativeReturns(returnCalculator.calculateCumulativeReturns(prices, dividends));
+        stockReturnData
+                .setCumulativeReturns(returnCalculator.calculateCumulativeReturns(prices, timestamps, dividends));
         stockReturnData.setDates(extractDates(chartResponse));
-        
+
         // Calculate amount changes if initial amount is provided
         if (initialAmount > 0) {
-            List<Double> amountChanges = returnCalculator.calculateAmountChanges(prices, initialAmount, weight);
+            List<Double> amountChanges = returnCalculator.calculateAmountChanges(prices, timestamps, dividends,
+                    initialAmount, weight);
             stockReturnData.setAmountChanges(amountChanges);
         }
-        
+
         return stockReturnData;
     }
 
@@ -159,12 +197,21 @@ public class PortfolioReturnService {
         }
 
         if (result.getIndicators() == null ||
-                result.getIndicators().getAdjclose() == null ||
-                result.getIndicators().getAdjclose().isEmpty()) {
+                result.getIndicators().getQuote() == null ||
+                result.getIndicators().getQuote().isEmpty() ||
+                result.getIndicators().getQuote().get(0).getClose() == null) {
             return new ArrayList<>();
         }
 
-        return result.getIndicators().getAdjclose().get(0).getAdjclose();
+        return result.getIndicators().getQuote().get(0).getClose();
+    }
+
+    private List<Long> extractTimestamps(ChartResponse chartResponse) {
+        ChartResponse.Result result = getFirstResult(chartResponse);
+        if (result == null || result.getTimestamp() == null) {
+            return new ArrayList<>();
+        }
+        return result.getTimestamp();
     }
 
     private List<ChartResponse.Dividend> extractDividends(ChartResponse chartResponse) {
@@ -214,7 +261,10 @@ public class PortfolioReturnService {
         portfolioData.setPortfolioTotalReturn(portfolioAnalyzer.calculatePortfolioTotalReturn(stockReturns, weights));
         portfolioData.setPortfolioCAGR(portfolioAnalyzer.calculatePortfolioCAGR(stockReturns, weights));
         portfolioData.setVolatility(portfolioAnalyzer.calculateVolatility(stockReturns, weights));
-        portfolioData.setSharpeRatio(portfolioAnalyzer.calculateSharpeRatio(portfolioData.getPortfolioTotalReturn(), portfolioData.getVolatility()));
+        portfolioData.setSharpeRatio(portfolioAnalyzer.calculateSharpeRatio(portfolioData.getPortfolioTotalReturn(),
+                portfolioData.getVolatility()));
+        portfolioData.setPortfolioCumulativeReturns(
+                portfolioAnalyzer.calculatePortfolioCumulativeReturns(stockReturns, weights));
         return portfolioData;
     }
 }

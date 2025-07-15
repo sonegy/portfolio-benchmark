@@ -1,6 +1,5 @@
 package portfolio.controller;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -26,7 +25,6 @@ public class PortfolioController {
     private final ChartGenerator chartGenerator;
     private final ReportGenerator reportGenerator;
 
-    @Autowired
     public PortfolioController(PortfolioReturnService portfolioReturnService,
                               ChartGenerator chartGenerator,
                               ReportGenerator reportGenerator) {
@@ -40,17 +38,9 @@ public class PortfolioController {
      */
     @PostMapping("/analyze")
     public ResponseEntity<PortfolioReturnData> analyzePortfolio(@RequestBody PortfolioRequest request) {
-        try {
-            validateRequest(request);
-            PortfolioReturnData result = portfolioReturnService.analyzePortfolio(request);
-            return ResponseEntity.ok(result);
-        } catch (IllegalArgumentException e) {
-            log.error("analyzePortfolio", e);
-            return ResponseEntity.badRequest().build();
-        } catch (Exception e) {
-            log.error("analyzePortfolio", e);
-            return ResponseEntity.internalServerError().build();
-        }
+        validateRequest(request);
+        PortfolioReturnData result = portfolioReturnService.analyzePortfolio(request);
+        return ResponseEntity.ok(result);
     }
 
     /**
@@ -58,16 +48,10 @@ public class PortfolioController {
      */
     @PostMapping("/chart/timeseries")
     public ResponseEntity<ChartData> generateTimeSeriesChart(@RequestBody PortfolioRequest request) {
-        try {
-            validateRequest(request);
-            PortfolioReturnData portfolioData = portfolioReturnService.analyzePortfolio(request);
-            ChartData chartData = chartGenerator.generateTimeSeriesChart(portfolioData);
-            return ResponseEntity.ok(chartData);
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.badRequest().build();
-        } catch (Exception e) {
-            return ResponseEntity.internalServerError().build();
-        }
+        validateRequest(request);
+        PortfolioReturnData portfolioData = portfolioReturnService.analyzePortfolio(request);
+        ChartData chartData = chartGenerator.generateTimeSeriesChart(portfolioData);
+        return ResponseEntity.ok(chartData);
     }
 
     /**
@@ -75,16 +59,10 @@ public class PortfolioController {
      */
     @PostMapping("/chart/comparison")
     public ResponseEntity<ChartData> generateComparisonChart(@RequestBody PortfolioRequest request) {
-        try {
-            validateRequest(request);
-            PortfolioReturnData portfolioData = portfolioReturnService.analyzePortfolio(request);
-            ChartData chartData = chartGenerator.generateComparisonChart(portfolioData);
-            return ResponseEntity.ok(chartData);
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.badRequest().build();
-        } catch (Exception e) {
-            return ResponseEntity.internalServerError().build();
-        }
+        validateRequest(request);
+        PortfolioReturnData portfolioData = portfolioReturnService.analyzePortfolio(request);
+        ChartData chartData = chartGenerator.generateComparisonChart(portfolioData);
+        return ResponseEntity.ok(chartData);
     }
 
     /**
@@ -92,16 +70,10 @@ public class PortfolioController {
      */
     @PostMapping("/chart/cumulative")
     public ResponseEntity<ChartData> generateCumulativeChart(@RequestBody PortfolioRequest request) {
-        try {
-            validateRequest(request);
-            PortfolioReturnData portfolioData = portfolioReturnService.analyzePortfolio(request);
-            ChartData chartData = chartGenerator.generateCumulativeReturnChart(portfolioData);
-            return ResponseEntity.ok(chartData);
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.badRequest().build();
-        } catch (Exception e) {
-            return ResponseEntity.internalServerError().build();
-        }
+        validateRequest(request);
+        PortfolioReturnData portfolioData = portfolioReturnService.analyzePortfolio(request);
+        ChartData chartData = chartGenerator.generateCumulativeReturnChart(portfolioData);
+        return ResponseEntity.ok(chartData);
     }
 
     /**
@@ -109,16 +81,10 @@ public class PortfolioController {
      */
     @PostMapping("/chart/amount")
     public ResponseEntity<ChartData> generateAmountChart(@RequestBody PortfolioRequest request) {
-        try {
-            validateRequest(request);
-            PortfolioReturnData portfolioData = portfolioReturnService.analyzePortfolio(request);
-            ChartData chartData = chartGenerator.generateAmountChangeChart(portfolioData);
-            return ResponseEntity.ok(chartData);
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.badRequest().build();
-        } catch (Exception e) {
-            return ResponseEntity.internalServerError().build();
-        }
+        validateRequest(request);
+        PortfolioReturnData portfolioData = portfolioReturnService.analyzePortfolio(request);
+        ChartData chartData = chartGenerator.generateAmountChangeChart(portfolioData);
+        return ResponseEntity.ok(chartData);
     }
 
     /**
@@ -126,16 +92,10 @@ public class PortfolioController {
      */
     @PostMapping("/report")
     public ResponseEntity<AnalysisReport> generateReport(@RequestBody PortfolioRequest request) {
-        try {
-            validateRequest(request);
-            PortfolioReturnData portfolioData = portfolioReturnService.analyzePortfolio(request);
-            AnalysisReport report = reportGenerator.generateReport(request, portfolioData);
-            return ResponseEntity.ok(report);
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.badRequest().build();
-        } catch (Exception e) {
-            return ResponseEntity.internalServerError().build();
-        }
+        validateRequest(request);
+        PortfolioReturnData portfolioData = portfolioReturnService.analyzePortfolio(request);
+        AnalysisReport report = reportGenerator.generateReport(request, portfolioData);
+        return ResponseEntity.ok(report);
     }
 
     /**
@@ -167,13 +127,4 @@ public class PortfolioController {
     /**
      * 전역 예외 처리
      */
-    @ExceptionHandler(IllegalArgumentException.class)
-    public ResponseEntity<String> handleIllegalArgumentException(IllegalArgumentException e) {
-        return ResponseEntity.badRequest().body(e.getMessage());
-    }
-
-    @ExceptionHandler(Exception.class)
-    public ResponseEntity<String> handleGenericException(Exception e) {
-        return ResponseEntity.internalServerError().body("Internal server error occurred");
-    }
 }

@@ -6,8 +6,10 @@ import portfolio.model.PortfolioReturnData;
 import portfolio.model.StockReturnData;
 
 import java.time.LocalDate;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -55,18 +57,24 @@ public class ChartGenerator {
     public ChartData generateComparisonChart(PortfolioReturnData portfolioData) {
         Map<String, List<Double>> series = new HashMap<>();
         
-        List<Double> priceReturns = portfolioData.getStockReturns().stream()
+        List<Double> priceReturns = new ArrayList<>();
+        priceReturns.add(portfolioData.getPortfolioPriceReturn());
+        priceReturns.addAll(portfolioData.getStockReturns().stream()
             .map(StockReturnData::getPriceReturn)
-            .collect(Collectors.toList());
+            .toList());
             
-        List<Double> totalReturns = portfolioData.getStockReturns().stream()
+        List<Double> totalReturns = new ArrayList<>();
+        totalReturns.add(portfolioData.getPortfolioTotalReturn());
+        totalReturns.addAll(portfolioData.getStockReturns().stream()
             .map(StockReturnData::getTotalReturn)
-            .collect(Collectors.toList());
+            .toList());
 
         // 주식 심볼 라벨 추출
-        List<String> labels = portfolioData.getStockReturns().stream()
+        List<String> labels = new ArrayList<>();
+        labels.add("Portfolio");
+        labels.addAll(portfolioData.getStockReturns().stream()
             .map(StockReturnData::getTicker)
-            .collect(Collectors.toList());
+            .toList());
 
         series.put("Price Return", priceReturns);
         series.put("Total Return", totalReturns);
@@ -87,12 +95,17 @@ public class ChartGenerator {
      * 누적 수익률 차트 데이터 생성
      */
     public ChartData generateCumulativeReturnChart(PortfolioReturnData portfolioData) {
-        Map<String, List<Double>> series = new HashMap<>();
+        Map<String, List<Double>> series = new LinkedHashMap<>();
         List<LocalDate> dates = null;
+
+        // 포트폴리오 데이터를 먼저 추가하여 차트에서 가장 앞에 오도록 설정
+        if (portfolioData.getPortfolioCumulativeReturns() != null) {
+            series.put("Portfolio", portfolioData.getPortfolioCumulativeReturns());
+        }
 
         for (StockReturnData stockData : portfolioData.getStockReturns()) {
             series.put(stockData.getTicker(), stockData.getCumulativeReturns());
-            if (dates == null) {
+            if (dates == null && stockData.getDates() != null && !stockData.getDates().isEmpty()) {
                 dates = stockData.getDates();
             }
         }

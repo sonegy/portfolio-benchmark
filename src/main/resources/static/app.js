@@ -50,7 +50,14 @@ async function handleFormSubmit(event) {
         showResults();
     } catch (error) {
         console.error('Analysis failed:', error);
-        showError(error.message || '포트폴리오 분석 중 오류가 발생했습니다.');
+        if (error.message.startsWith('Stock data has different start dates')) {
+            const suggestedDate = error.message.split('The latest start date is ')[1].replace('.', '');
+            const userMessage = `선택한 주식들의 데이터 시작일이 다릅니다. 모든 데이터를 포함하려면 시작일을 ${suggestedDate} 이후로 설정해주세요.`;
+            showError(userMessage);
+            document.getElementById('startDate').value = suggestedDate;
+        } else {
+            showError(error.message || '포트폴리오 분석 중 오류가 발생했습니다.');
+        }
     } finally {
         hideLoading();
     }
@@ -242,14 +249,14 @@ function createTimeSeriesChart(chartData) {
     const datasets = Object.entries(chartData.series).map(([ticker, data], index) => ({
         label: ticker,
         data: data,
-        borderColor: getChartColor(index),
-        backgroundColor: getChartColor(index, 0.1),
-        borderWidth: 1.5,
+        borderColor: getChartColor(index, 1, ticker),
+        backgroundColor: getChartColor(index, 0.1, ticker),
+        borderWidth: ticker === 'Portfolio' ? 3 : 1.5,
         fill: false,
         tension: 0.2,
         pointRadius: 1.5,
         pointHoverRadius: 5,
-        pointBackgroundColor: getChartColor(index),
+        pointBackgroundColor: getChartColor(index, 1, ticker),
         pointBorderColor: '#ffffff',
         pointBorderWidth: 1
     }));
@@ -434,6 +441,23 @@ function createDefaultCharts(portfolioData) {
         pointBorderColor: getChartColor(index),
         pointBorderWidth: 0.5
     }));
+
+    if (portfolioData.portfolioCumulativeReturns) {
+        datasets.push({
+            label: 'Portfolio',
+            data: portfolioData.portfolioCumulativeReturns,
+            borderColor: getChartColor(datasets.length),
+            backgroundColor: getChartColor(datasets.length, 0.1),
+            borderWidth: 3.5,
+            fill: false,
+            tension: 0.2,
+            pointRadius: 0.5,
+            pointHoverRadius: 4,
+            pointBackgroundColor: getChartColor(datasets.length, 0.3),
+            pointBorderColor: getChartColor(datasets.length),
+            pointBorderWidth: 0.5
+        });
+    }
     
     timeSeriesChart = new Chart(timeSeriesCtx, {
         type: 'line',
@@ -491,7 +515,18 @@ function createDefaultCharts(portfolioData) {
 function displayStockAnalysisTable(portfolioData) {
     const tableBody = document.querySelector('#stockAnalysisTable tbody');
     
-    tableBody.innerHTML = portfolioData.stockReturns.map(stock => `
+    let tableHtml = `
+        <tr class="portfolio-summary-row">
+            <td><strong>Portfolio</strong></td>
+            <td class="${getReturnClass(portfolioData.portfolioPriceReturn)}">${formatPercentage(portfolioData.portfolioPriceReturn)}</td>
+            <td class="${getReturnClass(portfolioData.portfolioTotalReturn)}">${formatPercentage(portfolioData.portfolioTotalReturn)}</td>
+            <td class="${getReturnClass(portfolioData.portfolioCAGR)}">${formatPercentage(portfolioData.portfolioCAGR)}</td>
+            <td>${formatPercentage(portfolioData.volatility || 0)}</td>
+            <td>-</td>
+        </tr>
+    `;
+
+    tableHtml += portfolioData.stockReturns.map(stock => `
         <tr>
             <td><strong>${stock.ticker}</strong></td>
             <td class="${getReturnClass(stock.priceReturn)}">${formatPercentage(stock.priceReturn)}</td>
@@ -501,6 +536,8 @@ function displayStockAnalysisTable(portfolioData) {
             <td><span class="recommendation-badge ${getRecommendationClass(stock.recommendation || 'HOLD')}">${getRecommendationText(stock.recommendation || 'HOLD')}</span></td>
         </tr>
     `).join('');
+
+    tableBody.innerHTML = tableHtml;
 }
 
 // 리스크 지표 표시
@@ -582,7 +619,10 @@ function getRecommendationText(recommendation) {
     return texts[recommendation] || '보유';
 }
 
-function getChartColor(index, alpha = 1) {
+function getChartColor(index, alpha = 1, label = '') {
+    if (label === 'Portfolio' || label === 'Portfolio Total') {
+        return `rgba(60, 60, 60, ${alpha})`; // 포트폴리오는 진한 회색
+    }
     const colors = [
         `rgba(54, 162, 235, ${alpha})`,   // 파랑
         `rgba(255, 99, 132, ${alpha})`,   // 빨강
