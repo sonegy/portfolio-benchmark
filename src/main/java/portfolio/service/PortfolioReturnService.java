@@ -11,6 +11,8 @@ import portfolio.model.StockReturnData;
 import portfolio.util.DateUtils;
 import portfolio.util.JsonLoggingUtils;
 
+import static java.util.Objects.requireNonNullElse;
+
 import java.time.LocalDate;
 import java.util.*;
 import java.util.Map.Entry;
@@ -266,6 +268,11 @@ public class PortfolioReturnService {
         }
 
         PortfolioReturnData portfolioData = new PortfolioReturnData(stockReturns);
+        List<LocalDate> dates = requireNonNullElse(stockReturns.get(0).getDates(), Collections.emptyList());
+        if (!dates.isEmpty()) {
+            portfolioData.setStartDate(dates.get(0));
+            portfolioData.setEndDate(dates.get(dates.size() - 1));
+        }
         portfolioData.setPortfolioPriceReturn(portfolioAnalyzer.calculatePortfolioPriceReturn(stockReturns, weights));
         portfolioData.setPortfolioTotalReturn(portfolioAnalyzer.calculatePortfolioTotalReturn(stockReturns, weights));
         portfolioData.setPortfolioCAGR(portfolioAnalyzer.calculatePortfolioCAGR(stockReturns, weights));

@@ -202,7 +202,17 @@ function displayPortfolioSummary(portfolioData) {
         }
     ];
 
-    summaryContainer.innerHTML = metrics.map(metric => `
+    // 자연어 요약 문구 생성
+    const summaryText = `이 포트폴리오는 ${portfolioData.startDate}부터 ${portfolioData.endDate}까지의 기간 동안 ` +
+        `총수익률은 ${formatPercentage(portfolioData.portfolioTotalReturn)}, ` +
+        `연평균 성장률은 ${formatPercentage(portfolioData.portfolioCAGR)}, ` +
+        `변동성은 ${formatPercentage(portfolioData.volatility)}입니다.`;
+
+    summaryContainer.innerHTML = `
+        <div class="portfolio-summary-text" style="font-size:1.1em; margin-bottom: 16px; font-weight:500; color:#333;">
+            ${summaryText}
+        </div>
+    ` + metrics.map(metric => `
         <div class="col-md-3 col-sm-6">
             <div class="metric-card">
                 <div class="metric-value ${metric.class}">${metric.value}</div>
@@ -251,19 +261,29 @@ function createTimeSeriesChart(chartData) {
         timeSeriesChart.destroy();
     }
 
+    /**
+     *             borderWidth: 3.5,
+            fill: false,
+            tension: 0.2,
+            pointRadius: 0.5,
+            pointHoverRadius: 4,
+            pointBackgroundColor: getChartColor(datasets.length, 0.3),
+            pointBorderColor: getChartColor(datasets.length),
+            pointBorderWidth: 0.5
+     */
     const datasets = Object.entries(chartData.series).map(([ticker, data], index) => ({
         label: ticker,
         data: data,
         borderColor: getChartColor(index, 1, ticker),
         backgroundColor: getChartColor(index, 0.1, ticker),
-        borderWidth: ticker === 'Portfolio' ? 3 : 1.5,
+        borderWidth: 3.5,
         fill: false,
         tension: 0.2,
-        pointRadius: 1.5,
-        pointHoverRadius: 5,
+        pointRadius: 0.5,
+        pointHoverRadius: 4,
         pointBackgroundColor: getChartColor(index, 1, ticker),
         pointBorderColor: '#ffffff',
-        pointBorderWidth: 1
+        pointBorderWidth: 0.5
     }));
 
     timeSeriesChart = new Chart(ctx, {

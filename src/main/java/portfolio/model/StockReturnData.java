@@ -13,6 +13,7 @@ public class StockReturnData {
     private List<Double> amountChanges;
     private List<Double> intervalReturns; // 기간별 수익율 목록(ex 0.1,0.2,0.1,-0.1) 기간별 수익율을 나타낸다.
     private double volatility;
+    private double maxDrawdown;
 
     public StockReturnData() {
     }
@@ -96,4 +97,13 @@ public class StockReturnData {
     public void setIntervalReturns(List<Double> intervalReturns) {
         this.intervalReturns = intervalReturns;
     }
+
+    public double getMaxDrawdown() {
+        return maxDrawdown;
+    }
+
+    public void setMaxDrawdown(double maxDrawdown) {
+        this.maxDrawdown = maxDrawdown;
+    }
+
 }
