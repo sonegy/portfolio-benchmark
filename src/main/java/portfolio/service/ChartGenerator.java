@@ -6,13 +6,11 @@ import portfolio.model.PortfolioReturnData;
 import portfolio.model.StockReturnData;
 
 import java.time.LocalDate;
-import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 /**
  * 다양한 형태의 차트 생성을 담당하는 서비스

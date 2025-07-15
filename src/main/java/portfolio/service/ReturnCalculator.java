@@ -159,6 +159,12 @@ public class ReturnCalculator {
         return calculatePortfolioValues(prices, timestamps, dividends, initialShares);
     }
 
+    /**
+     * 주어진 수익률 리스트의 변동성(표준편차)을 계산합니다.
+     *
+     * @param returns 수익률 리스트
+     * @return 변동성(표준편차)
+     */
     public double calculateVolatility(List<Double> returns) {
         log.debug("calculateVolatility.returns {}", JsonLoggingUtils.toJsonPretty(returns));
         double mean = returns.stream().mapToDouble(Double::doubleValue).average().orElse(0.0);

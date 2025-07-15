@@ -121,13 +121,8 @@ public class PortfolioController {
         if (request.getStartDate() != null && request.getEndDate() != null) {
             LocalDate start = request.getStartDate();
             LocalDate end = request.getEndDate();
-            // 년월만 입력된 것으로 간주: start와 end가 같고, 일자가 1일
-            if (start.equals(end) && start.getDayOfMonth() == 1) {
-                LocalDate firstDay = start.withDayOfMonth(1);
-                LocalDate lastDay = start.withDayOfMonth(start.lengthOfMonth());
-                request.setStartDate(firstDay);
-                request.setEndDate(lastDay);
-            }
+            request.setStartDate(start.withDayOfMonth(1));
+            request.setEndDate(end.withDayOfMonth(end.lengthOfMonth()));
         }
     }
 

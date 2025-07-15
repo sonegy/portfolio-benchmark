@@ -527,7 +527,7 @@ function displayStockAnalysisTable(portfolioData) {
             <td class="${getReturnClass(portfolioData.portfolioTotalReturn)}">${formatPercentage(portfolioData.portfolioTotalReturn)}</td>
             <td class="${getReturnClass(portfolioData.portfolioCAGR)}">${formatPercentage(portfolioData.portfolioCAGR)}</td>
             <td>${formatPercentage(portfolioData.volatility || 0)}</td>
-            <td>-</td>
+            
         </tr>
     `;
 
@@ -538,7 +538,7 @@ function displayStockAnalysisTable(portfolioData) {
             <td class="${getReturnClass(stock.totalReturn)}">${formatPercentage(stock.totalReturn)}</td>
             <td class="${getReturnClass(stock.cagr)}">${formatPercentage(stock.cagr)}</td>
             <td>${formatPercentage(stock.volatility || 0)}</td>
-            <td><span class="recommendation-badge ${getRecommendationClass(stock.recommendation || 'HOLD')}">${getRecommendationText(stock.recommendation || 'HOLD')}</span></td>
+            
         </tr>
     `).join('');
 
