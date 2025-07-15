@@ -43,12 +43,11 @@ public class ChartGenerator {
         ChartData.ChartConfiguration config = configurationService.createTimeSeriesConfiguration();
 
         return new ChartData(
-            "Portfolio Time Series Analysis",
-            "timeseries",
-            dates,
-            series,
-            config
-        );
+                "Portfolio Time Series Analysis",
+                "timeseries",
+                dates,
+                series,
+                config);
     }
 
     /**
@@ -56,25 +55,25 @@ public class ChartGenerator {
      */
     public ChartData generateComparisonChart(PortfolioReturnData portfolioData) {
         Map<String, List<Double>> series = new HashMap<>();
-        
+
         List<Double> priceReturns = new ArrayList<>();
         priceReturns.add(portfolioData.getPortfolioPriceReturn());
         priceReturns.addAll(portfolioData.getStockReturns().stream()
-            .map(StockReturnData::getPriceReturn)
-            .toList());
-            
+                .map(StockReturnData::getPriceReturn)
+                .toList());
+
         List<Double> totalReturns = new ArrayList<>();
         totalReturns.add(portfolioData.getPortfolioTotalReturn());
         totalReturns.addAll(portfolioData.getStockReturns().stream()
-            .map(StockReturnData::getTotalReturn)
-            .toList());
+                .map(StockReturnData::getTotalReturn)
+                .toList());
 
         // 주식 심볼 라벨 추출
         List<String> labels = new ArrayList<>();
         labels.add("Portfolio");
         labels.addAll(portfolioData.getStockReturns().stream()
-            .map(StockReturnData::getTicker)
-            .toList());
+                .map(StockReturnData::getTicker)
+                .toList());
 
         series.put("Price Return", priceReturns);
         series.put("Total Return", totalReturns);
@@ -82,12 +81,12 @@ public class ChartGenerator {
         ChartData.ChartConfiguration config = configurationService.createComparisonConfiguration();
 
         return new ChartData(
-            "Stock Performance Comparison",
-            "bar",
-            List.of(), // 바 차트는 날짜가 필요 없음
-            series,
-            config,
-            labels // 라벨 정보 추가
+                "Stock Performance Comparison",
+                "bar",
+                List.of(), // 바 차트는 날짜가 필요 없음
+                series,
+                config,
+                labels // 라벨 정보 추가
         );
     }
 
@@ -113,20 +112,23 @@ public class ChartGenerator {
         ChartData.ChartConfiguration config = configurationService.createLineChartConfiguration();
 
         return new ChartData(
-            "Cumulative Returns",
-            "line",
-            dates,
-            series,
-            config
-        );
+                "Cumulative Returns",
+                "line",
+                dates,
+                series,
+                config);
     }
 
     /**
      * 금액 변화 차트 데이터 생성
      */
     public ChartData generateAmountChangeChart(PortfolioReturnData portfolioData) {
-        Map<String, List<Double>> series = new HashMap<>();
+        Map<String, List<Double>> series = new LinkedHashMap<>();
         List<LocalDate> dates = null;
+
+        // 포트폴리오 전체 금액 변화 계산
+        List<Double> portfolioAmounts = calculatePortfolioAmounts(portfolioData);
+        series.put("Portfolio", portfolioAmounts);
 
         // 개별 주식 금액 변화
         for (StockReturnData stockData : portfolioData.getStockReturns()) {
@@ -138,21 +140,14 @@ public class ChartGenerator {
             }
         }
 
-        // 포트폴리오 전체 금액 변화 계산
-        if (!series.isEmpty() && dates != null) {
-            List<Double> portfolioAmounts = calculatePortfolioAmounts(portfolioData);
-            series.put("Portfolio Total", portfolioAmounts);
-        }
-
         ChartData.ChartConfiguration config = configurationService.createAmountChartConfiguration();
 
         return new ChartData(
-            "Portfolio Amount Changes",
-            "line",
-            dates,
-            series,
-            config
-        );
+                "Portfolio Amount Changes",
+                "line",
+                dates,
+                series,
+                config);
     }
 
     /**
@@ -165,27 +160,27 @@ public class ChartGenerator {
         }
 
         // 첫 번째 주식의 날짜 수를 기준으로 함
-        int dateCount = stockReturns.get(0).getAmountChanges() != null ? 
-            stockReturns.get(0).getAmountChanges().size() : 0;
-        
+        int dateCount = stockReturns.get(0).getAmountChanges() != null ? stockReturns.get(0).getAmountChanges().size()
+                : 0;
+
         if (dateCount == 0) {
             return List.of();
         }
 
         List<Double> portfolioAmounts = new ArrayList<>();
-        
+
         for (int i = 0; i < dateCount; i++) {
             double totalAmount = 0.0;
-            
+
             for (StockReturnData stockData : stockReturns) {
                 if (stockData.getAmountChanges() != null && i < stockData.getAmountChanges().size()) {
                     totalAmount += stockData.getAmountChanges().get(i);
                 }
             }
-            
+
             portfolioAmounts.add(totalAmount);
         }
-        
+
         return portfolioAmounts;
     }
 }

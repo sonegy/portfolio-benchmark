@@ -14,19 +14,19 @@ const errorSection = document.getElementById('errorSection');
 const errorMessage = document.getElementById('errorMessage');
 
 // 이벤트 리스너 등록
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', function () {
     portfolioForm.addEventListener('submit', handleFormSubmit);
-    
+
     // 주식 심볼 입력 시 가중치 컨테이너 업데이트
     document.getElementById('tickers').addEventListener('input', updateWeightsContainer);
-    
+
     // 기본 날짜 설정
     const today = new Date();
     const oneYearAgo = new Date(today.getFullYear() - 1, today.getMonth(), today.getDate());
-    
+
     document.getElementById('startDate').value = oneYearAgo.toISOString().split('T')[0];
     document.getElementById('endDate').value = today.toISOString().split('T')[0];
-    
+
     // 초기 가중치 컨테이너 업데이트
     updateWeightsContainer();
 });
@@ -34,16 +34,16 @@ document.addEventListener('DOMContentLoaded', function() {
 // 폼 제출 처리
 async function handleFormSubmit(event) {
     event.preventDefault();
-    
+
     const formData = getFormData();
     if (!validateFormData(formData)) {
         return;
     }
-    
+
     showLoading();
     hideError();
     hideResults();
-    
+
     try {
         const portfolioData = await analyzePortfolio(formData);
         await displayResults(portfolioData);
@@ -69,10 +69,10 @@ function getFormData() {
         .split(',')
         .map(ticker => ticker.trim().toUpperCase())
         .filter(ticker => ticker.length > 0);
-    
+
     const weights = getWeightsData();
     const initialAmount = parseFloat(document.getElementById('initialAmount').value) || 0;
-    
+
     return {
         tickers: tickers,
         weights: weights.length > 0 ? weights : null, // 가중치가 있을 때만 포함
@@ -89,17 +89,17 @@ function validateFormData(formData) {
         showError('최소 하나의 주식 심볼을 입력해주세요.');
         return false;
     }
-    
+
     if (!formData.startDate || !formData.endDate) {
         showError('시작일과 종료일을 모두 입력해주세요.');
         return false;
     }
-    
+
     if (new Date(formData.startDate) >= new Date(formData.endDate)) {
         showError('시작일은 종료일보다 이전이어야 합니다.');
         return false;
     }
-    
+
     return true;
 }
 
@@ -112,12 +112,12 @@ async function analyzePortfolio(formData) {
         },
         body: JSON.stringify(formData)
     });
-    
+
     if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
         throw new Error(errorData.message || `HTTP ${response.status}: ${response.statusText}`);
     }
-    
+
     return await response.json();
 }
 
@@ -130,11 +130,11 @@ async function getChartData(type, portfolioData) {
         },
         body: JSON.stringify(portfolioData)
     });
-    
+
     if (!response.ok) {
         throw new Error(`차트 데이터를 가져오는데 실패했습니다: ${response.statusText}`);
     }
-    
+
     return await response.json();
 }
 
@@ -147,11 +147,11 @@ async function getReportData(portfolioData) {
         },
         body: JSON.stringify(portfolioData)
     });
-    
+
     if (!response.ok) {
         throw new Error(`리포트 데이터를 가져오는데 실패했습니다: ${response.statusText}`);
     }
-    
+
     return await response.json();
 }
 
@@ -159,13 +159,13 @@ async function getReportData(portfolioData) {
 async function displayResults(portfolioData) {
     // 포트폴리오 요약 표시
     displayPortfolioSummary(portfolioData);
-    
+
     // 차트 생성
     await createCharts(portfolioData);
-    
+
     // 개별 주식 분석 테이블 생성
     displayStockAnalysisTable(portfolioData);
-    
+
     // 리스크 지표 표시
     displayRiskMetrics(portfolioData);
 }
@@ -173,7 +173,7 @@ async function displayResults(portfolioData) {
 // 포트폴리오 요약 표시
 function displayPortfolioSummary(portfolioData) {
     const summaryContainer = document.getElementById('portfolioSummary');
-    
+
     const metrics = [
         {
             label: '포트폴리오 가격 수익률',
@@ -196,7 +196,7 @@ function displayPortfolioSummary(portfolioData) {
             class: 'neutral-return'
         }
     ];
-    
+
     summaryContainer.innerHTML = metrics.map(metric => `
         <div class="col-md-3 col-sm-6">
             <div class="metric-card">
@@ -212,15 +212,15 @@ async function createCharts(portfolioData) {
     try {
         // 원본 요청 데이터 가져오기
         const originalRequest = getFormData();
-        
+
         // 시계열 차트 데이터 가져오기
         const timeSeriesData = await getChartData('cumulative', originalRequest);
         createTimeSeriesChart(timeSeriesData);
-        
+
         // 비교 차트 데이터 가져오기
         const comparisonData = await getChartData('comparison', originalRequest);
         createComparisonChart(comparisonData);
-        
+
         // 금액 변화 차트 생성 (초기 금액이 있는 경우)
         if (hasAmountChanges(portfolioData)) {
             const amountData = await getChartData('amount', originalRequest);
@@ -229,7 +229,7 @@ async function createCharts(portfolioData) {
         } else {
             document.getElementById('amountChartSection').style.display = 'none';
         }
-        
+
     } catch (error) {
         console.error('차트 생성 실패:', error);
         // 차트 생성 실패 시 기본 차트 표시
@@ -240,12 +240,12 @@ async function createCharts(portfolioData) {
 // 시계열 차트 생성
 function createTimeSeriesChart(chartData) {
     const ctx = document.getElementById('timeSeriesChart').getContext('2d');
-    
+
     // 기존 차트 제거
     if (timeSeriesChart) {
         timeSeriesChart.destroy();
     }
-    
+
     const datasets = Object.entries(chartData.series).map(([ticker, data], index) => ({
         label: ticker,
         data: data,
@@ -260,7 +260,7 @@ function createTimeSeriesChart(chartData) {
         pointBorderColor: '#ffffff',
         pointBorderWidth: 1
     }));
-    
+
     timeSeriesChart = new Chart(ctx, {
         type: 'line',
         data: {
@@ -295,8 +295,8 @@ function createTimeSeriesChart(chartData) {
                         text: '누적 수익률 (%)'
                     },
                     ticks: {
-                        callback: function(value) {
-                            return formatPercentage(value );
+                        callback: function (value) {
+                            return formatPercentage(value);
                         }
                     }
                 }
@@ -312,17 +312,17 @@ function createTimeSeriesChart(chartData) {
 // 비교 차트 생성
 function createComparisonChart(chartData) {
     const ctx = document.getElementById('comparisonChart').getContext('2d');
-    
+
     // 기존 차트 제거
     if (comparisonChart) {
         comparisonChart.destroy();
     }
-    
+
     // 데이터 구조 확인 및 변환
     let tickers = [];
     let priceReturns = [];
     let totalReturns = [];
-    
+
     if (chartData.series) {
         // 백엔드에서 제공하는 라벨 정보 사용
         if (chartData.labels && chartData.labels.length > 0) {
@@ -349,19 +349,19 @@ function createComparisonChart(chartData) {
             totalReturns = [];
         }
     }
-    
+
     // 데이터 검증
     if (tickers.length === 0) {
         console.error('No tickers found in chart data');
         return;
     }
-    
+
     // 디버깅 로그 추가
     console.log('Chart data:', chartData);
     console.log('Tickers:', tickers);
     console.log('Price returns:', priceReturns);
     console.log('Total returns:', totalReturns);
-    
+
     comparisonChart = new Chart(ctx, {
         type: 'bar',
         data: {
@@ -411,7 +411,7 @@ function createComparisonChart(chartData) {
                         text: '수익률 (%)'
                     },
                     ticks: {
-                        callback: function(value) {
+                        callback: function (value) {
                             return formatPercentage(value);
                         }
                     }
@@ -426,13 +426,13 @@ function createDefaultCharts(portfolioData) {
     // 시계열 차트
     const timeSeriesCtx = document.getElementById('timeSeriesChart').getContext('2d');
     if (timeSeriesChart) timeSeriesChart.destroy();
-    
+
     const datasets = portfolioData.stockReturns.map((stock, index) => ({
         label: stock.ticker,
         data: stock.cumulativeReturns || [],
         borderColor: getChartColor(index),
         backgroundColor: getChartColor(index, 0.1),
-        borderWidth: 2.5,
+        borderWidth: ticker === 'Portfolio' ? 3 : 1.5,
         fill: false,
         tension: 0.2,
         pointRadius: 0.5,
@@ -458,7 +458,7 @@ function createDefaultCharts(portfolioData) {
             pointBorderWidth: 0.5
         });
     }
-    
+
     timeSeriesChart = new Chart(timeSeriesCtx, {
         type: 'line',
         data: {
@@ -476,11 +476,11 @@ function createDefaultCharts(portfolioData) {
             }
         }
     });
-    
+
     // 비교 차트
     const comparisonCtx = document.getElementById('comparisonChart').getContext('2d');
     if (comparisonChart) comparisonChart.destroy();
-    
+
     comparisonChart = new Chart(comparisonCtx, {
         type: 'bar',
         data: {
@@ -514,7 +514,7 @@ function createDefaultCharts(portfolioData) {
 // 개별 주식 분석 테이블 생성
 function displayStockAnalysisTable(portfolioData) {
     const tableBody = document.querySelector('#stockAnalysisTable tbody');
-    
+
     let tableHtml = `
         <tr class="portfolio-summary-row">
             <td><strong>Portfolio</strong></td>
@@ -543,7 +543,7 @@ function displayStockAnalysisTable(portfolioData) {
 // 리스크 지표 표시
 function displayRiskMetrics(portfolioData) {
     const riskContainer = document.getElementById('riskMetrics');
-    
+
     const riskMetrics = [
         {
             label: '샤프 비율',
@@ -566,7 +566,7 @@ function displayRiskMetrics(portfolioData) {
             class: 'neutral-return'
         }
     ];
-    
+
     riskContainer.innerHTML = riskMetrics.map(metric => `
         <div class="col-md-3 col-sm-6">
             <div class="metric-card">
@@ -584,10 +584,10 @@ function formatPercentage(value) {
 
 function formatDate(dateString) {
     const date = new Date(dateString);
-    return date.toLocaleDateString('ko-KR', { 
-        year: 'numeric', 
-        month: 'short', 
-        day: 'numeric' 
+    return date.toLocaleDateString('ko-KR', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric'
     });
 }
 
@@ -668,7 +668,7 @@ function hideError() {
 function updateWeightsContainer() {
     const tickersInput = document.getElementById('tickers').value;
     const weightsContainer = document.getElementById('weightsContainer');
-    
+
     if (!tickersInput.trim()) {
         weightsContainer.innerHTML = `
             <div class="text-muted text-center">
@@ -677,12 +677,12 @@ function updateWeightsContainer() {
         `;
         return;
     }
-    
+
     const tickers = tickersInput
         .split(',')
         .map(ticker => ticker.trim().toUpperCase())
         .filter(ticker => ticker.length > 0);
-    
+
     if (tickers.length === 0) {
         weightsContainer.innerHTML = `
             <div class="text-muted text-center">
@@ -691,10 +691,10 @@ function updateWeightsContainer() {
         `;
         return;
     }
-    
+
     // 기본 가중치 (균등 분배)
     const defaultWeight = (100 / tickers.length).toFixed(1);
-    
+
     weightsContainer.innerHTML = `
         <div class="row g-2">
             ${tickers.map((ticker, index) => `
@@ -734,13 +734,13 @@ function updateWeightsContainer() {
             </div>
         </div>
     `;
-    
+
     // 가중치 입력 이벤트 리스너 추가
     document.querySelectorAll('.weight-input').forEach(input => {
         input.addEventListener('input', updateTotalWeight);
         input.addEventListener('change', validateWeights);
     });
-    
+
     updateTotalWeight();
 }
 
@@ -748,16 +748,16 @@ function updateWeightsContainer() {
 function updateTotalWeight() {
     const weightInputs = document.querySelectorAll('.weight-input');
     let total = 0;
-    
+
     weightInputs.forEach(input => {
         const value = parseFloat(input.value) || 0;
         total += value;
     });
-    
+
     const totalWeightSpan = document.getElementById('totalWeight');
     if (totalWeightSpan) {
         totalWeightSpan.textContent = total.toFixed(1) + '%';
-        
+
         // 색상 변경
         if (Math.abs(total - 100) < 0.1) {
             totalWeightSpan.className = 'text-success';
@@ -773,11 +773,11 @@ function updateTotalWeight() {
 function validateWeights() {
     const weightInputs = document.querySelectorAll('.weight-input');
     let total = 0;
-    
+
     weightInputs.forEach(input => {
         const value = parseFloat(input.value) || 0;
         total += value;
-        
+
         // 개별 입력값 검증
         if (value < 0) {
             input.value = 0;
@@ -785,7 +785,7 @@ function validateWeights() {
             input.value = 100;
         }
     });
-    
+
     updateTotalWeight();
 }
 
@@ -793,13 +793,13 @@ function validateWeights() {
 function equalizeWeights() {
     const weightInputs = document.querySelectorAll('.weight-input');
     if (weightInputs.length === 0) return;
-    
+
     const equalWeight = (100 / weightInputs.length).toFixed(1);
-    
+
     weightInputs.forEach(input => {
         input.value = equalWeight;
     });
-    
+
     updateTotalWeight();
 }
 
@@ -807,27 +807,27 @@ function equalizeWeights() {
 function normalizeWeights() {
     const weightInputs = document.querySelectorAll('.weight-input');
     if (weightInputs.length === 0) return;
-    
+
     let total = 0;
     const values = [];
-    
+
     weightInputs.forEach(input => {
         const value = parseFloat(input.value) || 0;
         values.push(value);
         total += value;
     });
-    
+
     if (total === 0) {
         equalizeWeights();
         return;
     }
-    
+
     // 비례적으로 조정
     weightInputs.forEach((input, index) => {
         const normalizedValue = (values[index] / total * 100).toFixed(1);
         input.value = normalizedValue;
     });
-    
+
     updateTotalWeight();
 }
 
@@ -835,12 +835,12 @@ function normalizeWeights() {
 function getWeightsData() {
     const weightInputs = document.querySelectorAll('.weight-input');
     const weights = [];
-    
+
     weightInputs.forEach(input => {
         const weight = parseFloat(input.value) || 0;
         weights.push(weight / 100); // 백분율을 소수로 변환
     });
-    
+
     return weights;
 }
 
@@ -854,12 +854,12 @@ function hasAmountChanges(portfolioData) {
 // 금액 변화 차트 생성
 function createAmountChart(portfolioData) {
     const ctx = document.getElementById('amountChart').getContext('2d');
-    
+
     // 기존 차트 제거
     if (amountChart) {
         amountChart.destroy();
     }
-    
+
     const datasets = portfolioData.stockReturns
         .filter(stock => stock.amountChanges && stock.amountChanges.length > 0)
         .map((stock, index) => ({
@@ -876,7 +876,7 @@ function createAmountChart(portfolioData) {
             pointBorderColor: '#ffffff',
             pointBorderWidth: 1
         }));
-    
+
     amountChart = new Chart(ctx, {
         type: 'line',
         data: {
@@ -897,7 +897,7 @@ function createAmountChart(portfolioData) {
                 },
                 tooltip: {
                     callbacks: {
-                        label: function(context) {
+                        label: function (context) {
                             return `${context.dataset.label}: $${context.parsed.y.toLocaleString()}`;
                         }
                     }
@@ -918,7 +918,7 @@ function createAmountChart(portfolioData) {
                         text: '금액 ($)'
                     },
                     ticks: {
-                        callback: function(value) {
+                        callback: function (value) {
                             return '$' + value.toLocaleString();
                         }
                     }
@@ -935,12 +935,12 @@ function createAmountChart(portfolioData) {
 // 금액 변화 차트 생성 (API 데이터 사용)
 function createAmountChartFromData(chartData) {
     const ctx = document.getElementById('amountChart').getContext('2d');
-    
+
     // 기존 차트 제거
     if (amountChart) {
         amountChart.destroy();
     }
-    
+
     const datasets = Object.entries(chartData.series).map(([ticker, data], index) => ({
         label: ticker,
         data: data,
@@ -955,7 +955,7 @@ function createAmountChartFromData(chartData) {
         pointBorderColor: '#ffffff',
         pointBorderWidth: 1
     }));
-    
+
     amountChart = new Chart(ctx, {
         type: 'line',
         data: {
@@ -976,7 +976,7 @@ function createAmountChartFromData(chartData) {
                 },
                 tooltip: {
                     callbacks: {
-                        label: function(context) {
+                        label: function (context) {
                             return `${context.dataset.label}: $${context.parsed.y.toLocaleString()}`;
                         }
                     }
@@ -997,7 +997,7 @@ function createAmountChartFromData(chartData) {
                         text: '금액 ($)'
                     },
                     ticks: {
-                        callback: function(value) {
+                        callback: function (value) {
                             return '$' + value.toLocaleString();
                         }
                     }
