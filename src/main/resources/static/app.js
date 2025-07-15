@@ -24,8 +24,8 @@ document.addEventListener('DOMContentLoaded', function () {
     const today = new Date();
     const oneYearAgo = new Date(today.getFullYear() - 1, today.getMonth(), today.getDate());
 
-    document.getElementById('startDate').value = oneYearAgo.toISOString().split('T')[0];
-    document.getElementById('endDate').value = today.toISOString().split('T')[0];
+//    document.getElementById('startDate').value = oneYearAgo.toISOString().split('T')[0];
+    //document.getElementById('endDate').value = today.toISOString().split('T')[0];
 
     // 초기 가중치 컨테이너 업데이트
     updateWeightsContainer();
