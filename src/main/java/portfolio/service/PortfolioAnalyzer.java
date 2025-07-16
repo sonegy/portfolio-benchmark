@@ -2,6 +2,7 @@ package portfolio.service;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
 import portfolio.model.PortfolioReturnData;
@@ -209,5 +210,9 @@ public class PortfolioAnalyzer {
         
         // Correlation = Covariance / (StdDev1 * StdDev2)
         return (covariance / returns1.size()) / (stdDev1 * stdDev2);
+    }
+
+    public double calculateMaxDrawdown(List<StockReturnData> stockReturns, List<Double> weights) {
+         return 0.0;
     }
 }

@@ -196,6 +196,24 @@ public class ReturnCalculator {
     }
 
     /**
+     * 주어진 가격 리스트의 최대낙폭을 계산합니다.
+     *
+     * @param prices 가격 리스트
+     * @return 최대낙폭(소수값)
+     */
+    public double calculateMaxDrawdown(List<Double> prices) {
+        if (prices == null || prices.size() < 2) return 0.0;
+        double peak = prices.get(0);
+        double maxDrawdown = 0.0;
+        for (double price : prices) {
+            if (price > peak) peak = price;
+            double drawdown = (peak - price) / peak;
+            if (drawdown > maxDrawdown) maxDrawdown = drawdown;
+        }
+        return maxDrawdown;
+    }
+
+    /**
      * 초기 보유 주식 수를 기준으로 시간에 따라 포트폴리오 가치를 계산하는 핵심 내부 메서드입니다.
      *
      * <p>배당금 발생 시 현금으로 누적한 뒤, 다음 가격 데이터 포인트에서 재투자합니다.

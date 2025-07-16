@@ -169,11 +169,18 @@ public class PortfolioReturnService {
         double volatility = returnCalculator.calculateVolatility(intervalReturns);
         log.debug("calculateStockReturn.ticker:{} volatility:{}", ticker, volatility);
 
+        // 최대낙폭
+        double maxDrawdown = returnCalculator.calculateMaxDrawdown(prices);
+        log.debug("calculateStockReturn.ticker:{} maxDrawdown:{}", ticker, maxDrawdown);
+
         StockReturnData stockReturnData = new StockReturnData(ticker, priceReturn, totalReturn, cagr, volatility);
         stockReturnData
                 .setCumulativeReturns(returnCalculator.calculateCumulativeReturns(prices, timestamps, dividends));
+        stockReturnData.setPrices(prices);
+        stockReturnData.setTimestamps(timestamps);
         stockReturnData.setDates(extractDates(chartResponse));
         stockReturnData.setIntervalReturns(intervalReturns);
+        stockReturnData.setMaxDrawdown(maxDrawdown);
 
         // Calculate amount changes if initial amount is provided
         if (initialAmount > 0) {
@@ -277,6 +284,7 @@ public class PortfolioReturnService {
         portfolioData.setPortfolioTotalReturn(portfolioAnalyzer.calculatePortfolioTotalReturn(stockReturns, weights));
         portfolioData.setPortfolioCAGR(portfolioAnalyzer.calculatePortfolioCAGR(stockReturns, weights));
         portfolioData.setVolatility(portfolioAnalyzer.calculateVolatility(stockReturns, weights));
+        portfolioData.setMaxDrawdown(portfolioAnalyzer.calculateMaxDrawdown(stockReturns, weights));
         portfolioData.setSharpeRatio(portfolioAnalyzer.calculateSharpeRatio(portfolioData.getPortfolioTotalReturn(),
                 portfolioData.getVolatility()));
         portfolioData.setPortfolioCumulativeReturns(

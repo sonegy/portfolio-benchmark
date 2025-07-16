@@ -12,6 +12,7 @@ public class PortfolioReturnData {
     private double portfolioCAGR;
     private double volatility;
     private double sharpeRatio;
+    private double maxDrawdown;
     private List<Double> portfolioCumulativeReturns;
 
     public PortfolioReturnData(List<StockReturnData> stockReturns) {
@@ -88,5 +89,13 @@ public class PortfolioReturnData {
 
     public void setPortfolioCumulativeReturns(List<Double> portfolioCumulativeReturns) {
         this.portfolioCumulativeReturns = portfolioCumulativeReturns;
+    }
+    
+    public double getMaxDrawdown() {
+        return maxDrawdown;
+    }
+
+    public void setMaxDrawdown(double maxDrawdown) {
+        this.maxDrawdown = maxDrawdown;
     }
 }
