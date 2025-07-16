@@ -77,18 +77,4 @@ class ChartGeneratorTest {
         assertTrue(chartData.getSeries().containsKey("Total Return"));
     }
 
-    @Test
-    void shouldGenerateCumulativeReturnChartData() {
-        // When
-        ChartData chartData = chartGenerator.generateCumulativeReturnChart(samplePortfolioData);
-
-        // Then
-        assertNotNull(chartData);
-        assertEquals("Cumulative Returns", chartData.getTitle());
-        assertEquals("line", chartData.getType());
-        assertFalse(chartData.getDates().isEmpty());
-        assertEquals(2, chartData.getSeries().size());
-        assertTrue(chartData.getSeries().containsKey("AAPL"));
-        assertTrue(chartData.getSeries().containsKey("MSFT"));
-    }
 }

@@ -28,8 +28,13 @@ public class ChartGenerator {
      * 시계열 차트 데이터 생성
      */
     public ChartData generateTimeSeriesChart(PortfolioReturnData portfolioData) {
-        Map<String, List<Double>> series = new HashMap<>();
+        Map<String, List<Double>> series = new LinkedHashMap<>();
         List<LocalDate> dates = null;
+
+        // 포트폴리오 데이터를 먼저 추가하여 차트에서 가장 앞에 오도록 설정
+        if (portfolioData.getPortfolioCumulativeReturns() != null) {
+            series.put("Portfolio", portfolioData.getPortfolioCumulativeReturns());
+        }
 
         for (StockReturnData stockData : portfolioData.getStockReturns()) {
             series.put(stockData.getTicker(), stockData.getCumulativeReturns());
@@ -88,34 +93,34 @@ public class ChartGenerator {
         );
     }
 
-    /**
-     * 누적 수익률 차트 데이터 생성
-     */
-    public ChartData generateCumulativeReturnChart(PortfolioReturnData portfolioData) {
-        Map<String, List<Double>> series = new LinkedHashMap<>();
-        List<LocalDate> dates = null;
+    // /**
+    //  * 누적 수익률 차트 데이터 생성
+    //  */
+    // public ChartData generateCumulativeReturnChart(PortfolioReturnData portfolioData) {
+    //     Map<String, List<Double>> series = new LinkedHashMap<>();
+    //     List<LocalDate> dates = null;
 
-        // 포트폴리오 데이터를 먼저 추가하여 차트에서 가장 앞에 오도록 설정
-        if (portfolioData.getPortfolioCumulativeReturns() != null) {
-            series.put("Portfolio", portfolioData.getPortfolioCumulativeReturns());
-        }
+    //     // 포트폴리오 데이터를 먼저 추가하여 차트에서 가장 앞에 오도록 설정
+    //     if (portfolioData.getPortfolioCumulativeReturns() != null) {
+    //         series.put("Portfolio", portfolioData.getPortfolioCumulativeReturns());
+    //     }
 
-        for (StockReturnData stockData : portfolioData.getStockReturns()) {
-            series.put(stockData.getTicker(), stockData.getCumulativeReturns());
-            if (dates == null && stockData.getDates() != null && !stockData.getDates().isEmpty()) {
-                dates = stockData.getDates();
-            }
-        }
+    //     for (StockReturnData stockData : portfolioData.getStockReturns()) {
+    //         series.put(stockData.getTicker(), stockData.getCumulativeReturns());
+    //         if (dates == null && stockData.getDates() != null && !stockData.getDates().isEmpty()) {
+    //             dates = stockData.getDates();
+    //         }
+    //     }
 
-        ChartData.ChartConfiguration config = configurationService.createLineChartConfiguration();
+    //     ChartData.ChartConfiguration config = configurationService.createLineChartConfiguration();
 
-        return new ChartData(
-                "Cumulative Returns",
-                "line",
-                dates,
-                series,
-                config);
-    }
+    //     return new ChartData(
+    //             "Cumulative Returns",
+    //             "line",
+    //             dates,
+    //             series,
+    //             config);
+    // }
 
     /**
      * 금액 변화 차트 데이터 생성

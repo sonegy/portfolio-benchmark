@@ -96,8 +96,6 @@ class PortfolioControllerTest {
             .thenReturn(sampleChartData);
         when(chartGenerator.generateComparisonChart(any(PortfolioReturnData.class)))
             .thenReturn(sampleChartData);
-        when(chartGenerator.generateCumulativeReturnChart(any(PortfolioReturnData.class)))
-            .thenReturn(sampleChartData);
         when(chartGenerator.generateAmountChangeChart(any(PortfolioReturnData.class)))
             .thenReturn(sampleChartData);
         when(reportGenerator.generateReport(any(PortfolioRequest.class), any(PortfolioReturnData.class)))
@@ -112,7 +110,6 @@ class PortfolioControllerTest {
                 .andExpect(jsonPath("$.portfolioData").exists())
                 .andExpect(jsonPath("$.timeSeriesChart").exists())
                 .andExpect(jsonPath("$.comparisonChart").exists())
-                .andExpect(jsonPath("$.cumulativeChart").exists())
                 .andExpect(jsonPath("$.amountChart").exists())
                 .andExpect(jsonPath("$.report").exists());
     }

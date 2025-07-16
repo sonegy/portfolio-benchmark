@@ -264,16 +264,6 @@ function createTimeSeriesChart(chartData) {
         timeSeriesChart.destroy();
     }
 
-    /**
-     *             borderWidth: 3.5,
-            fill: false,
-            tension: 0.2,
-            pointRadius: 0.5,
-            pointHoverRadius: 4,
-            pointBackgroundColor: getChartColor(datasets.length, 0.3),
-            pointBorderColor: getChartColor(datasets.length),
-            pointBorderWidth: 0.5
-     */
     const datasets = Object.entries(chartData.series).map(([ticker, data], index) => ({
         label: ticker,
         data: data,
