@@ -23,6 +23,31 @@ import java.time.LocalDate;
 @CrossOrigin(origins = "*")
 public class PortfolioController {
 
+    /**
+     * 여러 분석/차트/리포트 데이터를 한 번에 반환하는 통합 엔드포인트
+     */
+    @PostMapping("/analyze/all")
+    public ResponseEntity<portfolio.model.PortfolioFullAnalysisResponse> analyzeAll(@RequestBody portfolio.model.PortfolioRequest request) {
+        return ResponseEntity.ok(generateFullAnalysisResponse(request));
+    }
+
+    /**
+     * 여러 분석/차트/리포트 데이터를 한 번에 생성하는 내부 메서드 (구조적 변경)
+     */
+    private portfolio.model.PortfolioFullAnalysisResponse generateFullAnalysisResponse(portfolio.model.PortfolioRequest request) {
+        adjustToPreviousMonthLastDay(request);
+        validateRequest(request);
+        portfolio.model.PortfolioReturnData portfolioData = portfolioReturnService.analyzePortfolio(request);
+        portfolio.model.ChartData timeSeriesChart = chartGenerator.generateTimeSeriesChart(portfolioData);
+        portfolio.model.ChartData comparisonChart = chartGenerator.generateComparisonChart(portfolioData);
+        portfolio.model.ChartData cumulativeChart = chartGenerator.generateCumulativeReturnChart(portfolioData);
+        portfolio.model.ChartData amountChart = chartGenerator.generateAmountChangeChart(portfolioData);
+        portfolio.model.AnalysisReport report = reportGenerator.generateReport(request, portfolioData);
+        return new portfolio.model.PortfolioFullAnalysisResponse(
+            portfolioData, timeSeriesChart, comparisonChart, cumulativeChart, amountChart, report
+        );
+    }
+
     private final PortfolioReturnService portfolioReturnService;
     private final ChartGenerator chartGenerator;
     private final ReportGenerator reportGenerator;

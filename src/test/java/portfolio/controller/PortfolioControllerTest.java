@@ -88,6 +88,36 @@ class PortfolioControllerTest {
     }
 
     @Test
+    void shouldAnalyzeAllAtOnce() throws Exception {
+        // Given
+        when(portfolioReturnService.analyzePortfolio(any(PortfolioRequest.class)))
+            .thenReturn(samplePortfolioData);
+        when(chartGenerator.generateTimeSeriesChart(any(PortfolioReturnData.class)))
+            .thenReturn(sampleChartData);
+        when(chartGenerator.generateComparisonChart(any(PortfolioReturnData.class)))
+            .thenReturn(sampleChartData);
+        when(chartGenerator.generateCumulativeReturnChart(any(PortfolioReturnData.class)))
+            .thenReturn(sampleChartData);
+        when(chartGenerator.generateAmountChangeChart(any(PortfolioReturnData.class)))
+            .thenReturn(sampleChartData);
+        when(reportGenerator.generateReport(any(PortfolioRequest.class), any(PortfolioReturnData.class)))
+            .thenReturn(sampleReport);
+
+        // When & Then
+        mockMvc.perform(post("/api/portfolio/analyze/all")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(sampleRequest)))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.portfolioData").exists())
+                .andExpect(jsonPath("$.timeSeriesChart").exists())
+                .andExpect(jsonPath("$.comparisonChart").exists())
+                .andExpect(jsonPath("$.cumulativeChart").exists())
+                .andExpect(jsonPath("$.amountChart").exists())
+                .andExpect(jsonPath("$.report").exists());
+    }
+
+    @Test
     void shouldAnalyzePortfolio() throws Exception {
         // Given
         when(portfolioReturnService.analyzePortfolio(any(PortfolioRequest.class)))

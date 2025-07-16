@@ -45,8 +45,9 @@ async function handleFormSubmit(event) {
     hideResults();
 
     try {
-        const portfolioData = await analyzePortfolio(formData);
-        await displayResults(portfolioData);
+        // 통합 API로 모든 데이터 한 번에 호출
+        const analysisResult = await analyzePortfolioAll(formData);
+        await displayResultsAll(analysisResult);
         showResults();
     } catch (error) {
         console.error('Analysis failed:', error);
@@ -62,6 +63,48 @@ async function handleFormSubmit(event) {
         hideLoading();
     }
 }
+
+// 통합 결과 표시 함수
+async function displayResultsAll(analysisResult) {
+    // 1. 포트폴리오 요약 표시
+    displayPortfolioSummary(analysisResult.portfolioData);
+
+    // 2. 차트 생성 (통합 데이터 사용)
+    await createChartsAll(analysisResult);
+
+    // 3. 개별 주식 분석 테이블
+    displayStockAnalysisTable(analysisResult.portfolioData);
+
+    // 4. 리스크 지표 표시
+    displayRiskMetrics(analysisResult.portfolioData);
+}
+
+// 통합 차트 생성 함수
+async function createChartsAll(analysisResult) {
+    // 시계열 차트
+    if (analysisResult.timeSeriesChart) {
+        createTimeSeriesChart(analysisResult.timeSeriesChart);
+    }
+    // 비교 차트
+    if (analysisResult.comparisonChart) {
+        createComparisonChart(analysisResult.comparisonChart);
+    }
+    // 금액 변화 차트
+    if (analysisResult.amountChart) {
+        createAmountChartFromData(analysisResult.amountChart);
+        document.getElementById('amountChartSection').style.display = 'block';
+    } else {
+        document.getElementById('amountChartSection').style.display = 'none';
+    }
+    // 최대 낙폭(MDD) 차트
+    if (analysisResult.portfolioData && analysisResult.portfolioData.maxDrawdowns && analysisResult.portfolioData.maxDrawdowns.length > 0) {
+        createMaxDrawdownChart(analysisResult.portfolioData);
+        document.getElementById('maxDrawdownChartSection').style.display = 'block';
+    } else {
+        document.getElementById('maxDrawdownChartSection').style.display = 'none';
+    }
+}
+
 
 // 폼 데이터 수집
 function normalizeMonthInput(value) {
@@ -108,9 +151,9 @@ function validateFormData(formData) {
     return true;
 }
 
-// 포트폴리오 분석 API 호출
-async function analyzePortfolio(formData) {
-    const response = await fetch(`${API_BASE_URL}/analyze`, {
+// 통합 분석/차트/리포트 API 호출
+async function analyzePortfolioAll(formData) {
+    const response = await fetch(`${API_BASE_URL}/analyze/all`, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
@@ -126,54 +169,6 @@ async function analyzePortfolio(formData) {
     return await response.json();
 }
 
-// 차트 데이터 가져오기
-async function getChartData(type, portfolioData) {
-    const response = await fetch(`${API_BASE_URL}/chart/${type}`, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(portfolioData)
-    });
-
-    if (!response.ok) {
-        throw new Error(`차트 데이터를 가져오는데 실패했습니다: ${response.statusText}`);
-    }
-
-    return await response.json();
-}
-
-// 리포트 데이터 가져오기
-async function getReportData(portfolioData) {
-    const response = await fetch(`${API_BASE_URL}/report`, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(portfolioData)
-    });
-
-    if (!response.ok) {
-        throw new Error(`리포트 데이터를 가져오는데 실패했습니다: ${response.statusText}`);
-    }
-
-    return await response.json();
-}
-
-// 결과 표시
-async function displayResults(portfolioData) {
-    // 포트폴리오 요약 표시
-    displayPortfolioSummary(portfolioData);
-
-    // 차트 생성
-    await createCharts(portfolioData);
-
-    // 개별 주식 분석 테이블 생성
-    displayStockAnalysisTable(portfolioData);
-
-    // 리스크 지표 표시
-    displayRiskMetrics(portfolioData);
-}
 
 // 포트폴리오 요약 표시
 function displayPortfolioSummary(portfolioData) {
@@ -258,44 +253,6 @@ function createMaxDrawdownChart(portfolioData) {
             }
         }
     });
-}
-
-// 차트 생성
-async function createCharts(portfolioData) {
-    try {
-        // 원본 요청 데이터 가져오기
-        const originalRequest = getFormData();
-
-        // 시계열 차트 데이터 가져오기
-        const timeSeriesData = await getChartData('cumulative', originalRequest);
-        createTimeSeriesChart(timeSeriesData);
-
-        // 비교 차트 데이터 가져오기
-        const comparisonData = await getChartData('comparison', originalRequest);
-        createComparisonChart(comparisonData);
-
-        // 금액 변화 차트 생성 (초기 금액이 있는 경우)
-        if (hasAmountChanges(portfolioData)) {
-            const amountData = await getChartData('amount', originalRequest);
-            createAmountChartFromData(amountData);
-            document.getElementById('amountChartSection').style.display = 'block';
-        } else {
-            document.getElementById('amountChartSection').style.display = 'none';
-        }
-
-        // 최대 낙폭(MDD) 차트 생성
-        if (portfolioData.maxDrawdowns && portfolioData.maxDrawdowns.length > 0) {
-            createMaxDrawdownChart(portfolioData);
-            document.getElementById('maxDrawdownChartSection').style.display = 'block';
-        } else {
-            document.getElementById('maxDrawdownChartSection').style.display = 'none';
-        }
-
-    } catch (error) {
-        console.error('차트 생성 실패:', error);
-        // 차트 생성 실패 시 기본 차트 표시
-        createDefaultCharts(portfolioData);
-    }
 }
 
 // 시계열 차트 생성
