@@ -558,7 +558,7 @@ function displayStockAnalysisTable(portfolioData) {
             <td class="${getReturnClass(stock.totalReturn)}">${formatPercentage(stock.totalReturn)}</td>
             <td class="${getReturnClass(stock.cagr)}">${formatPercentage(stock.cagr)}</td>
             <td>${formatPercentage(stock.volatility || 0)}</td>
-            
+            <td>${formatPercentage(stock.maxDrawdown)}</td>
         </tr>
     `).join('');
 

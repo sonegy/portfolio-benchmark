@@ -54,12 +54,18 @@ public class StockReturnData {
     public StockReturnData() {
     }
 
-    public StockReturnData(String ticker, double priceReturn, double totalReturn, double cagr, double volatility) {
+    public StockReturnData(String ticker, double priceReturn, double totalReturn, double cagr, double volatility, double maxDrawdown) {
         this.ticker = ticker;
         this.priceReturn = priceReturn;
         this.totalReturn = totalReturn;
         this.cagr = cagr;
         this.volatility = volatility;
+        this.maxDrawdown = maxDrawdown;
+    }
+
+    // 기존 생성자(호환성 유지)
+    public StockReturnData(String ticker, double priceReturn, double totalReturn, double cagr, double volatility) {
+        this(ticker, priceReturn, totalReturn, cagr, volatility, 0.0);
     }
 
     public String getTicker() {
