@@ -15,6 +15,7 @@ public class PortfolioReturnData {
     private List<Double> maxDrawdowns;
     private double maxDrawdown;
     private List<Double> portfolioCumulativeReturns;
+    private List<LocalDate> dates;
 
     public PortfolioReturnData(List<StockReturnData> stockReturns) {
         this.stockReturns = stockReturns;
@@ -106,5 +107,13 @@ public class PortfolioReturnData {
 
     public void setMaxDrawdown(double maxDrawdown) {
         this.maxDrawdown = maxDrawdown;
+    }
+    
+    public List<LocalDate> getDates() {
+        return dates;
+    }
+
+    public void setDates(List<LocalDate> dates) {
+        this.dates = dates;
     }
 }

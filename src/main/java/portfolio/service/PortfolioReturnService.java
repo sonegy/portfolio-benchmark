@@ -294,6 +294,7 @@ public class PortfolioReturnService {
         if (!dates.isEmpty()) {
             portfolioData.setStartDate(dates.get(0));
             portfolioData.setEndDate(dates.get(dates.size() - 1));
+            portfolioData.setDates(dates);
         }
         portfolioData.setPortfolioPriceReturn(portfolioAnalyzer.calculatePortfolioPriceReturn(stockReturns, weights));
         portfolioData.setPortfolioTotalReturn(portfolioAnalyzer.calculatePortfolioTotalReturn(stockReturns, weights));

@@ -222,6 +222,44 @@ function displayPortfolioSummary(portfolioData) {
     `).join('');
 }
 
+// 최대 낙폭(MDD) 차트 생성
+function createMaxDrawdownChart(portfolioData) {
+    const ctx = document.getElementById('maxDrawdownChart').getContext('2d');
+    if (window.maxDrawdownChartInstance) {
+        window.maxDrawdownChartInstance.destroy();
+    }
+    window.maxDrawdownChartInstance = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: (portfolioData.dates || []).map(formatDate),
+            datasets: [{
+                label: '최대 낙폭(MDD)',
+                data: portfolioData.maxDrawdowns || [],
+                borderColor: 'rgba(220,53,69,1)',
+                backgroundColor: 'rgba(220,53,69,0.1)',
+                fill: true,
+                tension: 0.1,
+                pointRadius: 0,
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: {
+                    reverse: true, // y축 반전: 0이 위, 음수/큰값이 아래
+                    ticks: {
+                        callback: value => formatPercentage(value)
+                    }
+                }
+            },
+            plugins: {
+                legend: { display: true }
+            }
+        }
+    });
+}
+
 // 차트 생성
 async function createCharts(portfolioData) {
     try {
@@ -243,6 +281,14 @@ async function createCharts(portfolioData) {
             document.getElementById('amountChartSection').style.display = 'block';
         } else {
             document.getElementById('amountChartSection').style.display = 'none';
+        }
+
+        // 최대 낙폭(MDD) 차트 생성
+        if (portfolioData.maxDrawdowns && portfolioData.maxDrawdowns.length > 0) {
+            createMaxDrawdownChart(portfolioData);
+            document.getElementById('maxDrawdownChartSection').style.display = 'block';
+        } else {
+            document.getElementById('maxDrawdownChartSection').style.display = 'none';
         }
 
     } catch (error) {
