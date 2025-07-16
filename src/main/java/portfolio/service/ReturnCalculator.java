@@ -12,7 +12,8 @@ import portfolio.util.JsonLoggingUtils;
  * 다양한 유형의 투자 수익률을 계산하는 서비스 클래스입니다.
  * 단순 가격 수익률, 배당금을 포함한 총수익률, 연평균 복리 성장률(CAGR), 누적 수익률 등을 계산할 수 있습니다.
  *
- * <p>이 클래스는 주가, 타임스탬프, 배당금 정보를 바탕으로 투자 성과를 정확하게 산출하는 데 사용됩니다.
+ * <p>
+ * 이 클래스는 주가, 타임스탬프, 배당금 정보를 바탕으로 투자 성과를 정확하게 산출하는 데 사용됩니다.
  */
 @Slf4j
 @Service
@@ -94,14 +95,16 @@ public class ReturnCalculator {
     /**
      * 배당 재투자를 가정하여 기간 내 누적 수익률을 계산합니다.
      *
-     * <p>초기 1주를 보유하고, 배당금은 모두 재투자한다고 가정합니다.
+     * <p>
+     * 초기 1주를 보유하고, 배당금은 모두 재투자한다고 가정합니다.
      * 가격 데이터 포인트 사이에 지급된 배당도 정확히 반영합니다.
      *
      * @param prices     가격 리스트 (시간순 정렬)
      * @param timestamps 각 가격에 대응하는 타임스탬프 리스트 (시간순 정렬)
      * @param dividends  기간 중 지급된 배당금 리스트 (원본 리스트는 변경되지 않음)
      * @return 각 시점별 누적 수익률 리스트(소수값)
-     * @throws IllegalArgumentException 가격, 타임스탬프가 null/비어있거나 크기가 다르거나, 시작 가격이 0 이하인 경우
+     * @throws IllegalArgumentException 가격, 타임스탬프가 null/비어있거나 크기가 다르거나, 시작 가격이 0 이하인
+     *                                  경우
      */
     public List<Double> calculateCumulativeReturns(List<Double> prices, List<Long> timestamps,
             List<Dividend> dividends) {
@@ -177,9 +180,9 @@ public class ReturnCalculator {
     /**
      * 초기 투자금액 1.0으로 설정하고, 배당 재투자를 포함하여 시간에 따라 포트폴리오의 수익률을 계산합니다.
      *
-     * @param prices        가격 리스트 (시간순 정렬)
-     * @param timestamps    각 가격에 대응하는 타임스탬프 리스트
-     * @param dividends     기간 중 지급된 배당금 리스트
+     * @param prices     가격 리스트 (시간순 정렬)
+     * @param timestamps 각 가격에 대응하는 타임스탬프 리스트
+     * @param dividends  기간 중 지급된 배당금 리스트
      * @return 각 시점별 포트폴리오의 수익률 리스트
      */
     public List<Double> calculateReturn(List<Double> prices, List<Long> timestamps, List<Dividend> dividends) {
@@ -199,24 +202,31 @@ public class ReturnCalculator {
      * 주어진 가격 리스트의 최대낙폭을 계산합니다.
      *
      * @param prices 가격 리스트
-     * @return 최대낙폭(소수값)
+     * @return 최대낙폭(목록)
      */
-    public double calculateMaxDrawdown(List<Double> prices) {
-        if (prices == null || prices.size() < 2) return 0.0;
+    public List<Double> calculateMaxDrawdowns(List<Double> prices) {
+        if (prices == null || prices.size() < 2)
+            return List.of(0.0);
+
+        List<Double> drawdowns = new ArrayList<>();
         double peak = prices.get(0);
-        double maxDrawdown = 0.0;
+
         for (double price : prices) {
-            if (price > peak) peak = price;
-            double drawdown = (peak - price) / peak;
-            if (drawdown > maxDrawdown) maxDrawdown = drawdown;
+            if (price > peak) {
+                peak = price;
+            }
+            double drawdown = (peak == 0.0) ? 0.0 : (peak - price) / peak;
+            log.debug("calculateMaxDrawdowns price {} peak {} drawdown {}", price, peak, drawdown);
+            drawdowns.add(drawdown);
         }
-        return maxDrawdown;
+        return drawdowns;
     }
 
     /**
      * 초기 보유 주식 수를 기준으로 시간에 따라 포트폴리오 가치를 계산하는 핵심 내부 메서드입니다.
      *
-     * <p>배당금 발생 시 현금으로 누적한 뒤, 다음 가격 데이터 포인트에서 재투자합니다.
+     * <p>
+     * 배당금 발생 시 현금으로 누적한 뒤, 다음 가격 데이터 포인트에서 재투자합니다.
      *
      * @param prices        가격 리스트 (시간순 정렬)
      * @param timestamps    각 가격에 대응하는 타임스탬프 리스트
@@ -277,5 +287,21 @@ public class ReturnCalculator {
 
         return portfolioValues;
     }
-}
 
+    public Double calculateMaxValue(List<Double> values) {
+        // double값에서 가장 큰수를 찾는데, stream 사용하지 않고 for문으로 구현
+        double max = Double.MIN_VALUE;
+        for (Double value : values) {
+            if (value > max) {
+                max = value;
+            }
+            log.debug("calculateMaxValue max {} value {}", max, value);
+        }
+        return max;
+    }
+
+    public List<Double> calculatePrices(List<Double> priceReturns, double initialAmount) {
+        List<Double> prices = priceReturns.stream().map(d -> initialAmount + (d * initialAmount)).toList();
+        return prices;
+    }
+}

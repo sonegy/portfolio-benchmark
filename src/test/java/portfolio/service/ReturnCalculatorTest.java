@@ -363,4 +363,37 @@ class ReturnCalculatorTest {
         // 0.122
         assertEquals(0.122, cumulativeReturns.get(1), 0.001);
     }
+
+    @Test
+    void shouldCalculateMaxDrawdowns() {
+        ReturnCalculator calculator = new ReturnCalculator();
+        // 예시: [100, 120, 110, 130, 90, 95]
+        List<Double> prices = List.of(100.0, 120.0, 110.0, 130.0, 90.0, 95.0);
+        List<Double> expected = List.of(
+            0.0,         // 100 -> peak=100, drawdown=0
+            0.0,         // 120 -> peak=120, drawdown=0
+            0.08333333,  // 110 -> peak=120, drawdown=(120-110)/120
+            0.0,         // 130 -> peak=130, drawdown=0
+            0.30769231,  // 90  -> peak=130, drawdown=(130-90)/130
+            0.26923077   // 95  -> peak=130, drawdown=(130-95)/130
+        );
+        List<Double> result = calculator.calculateMaxDrawdowns(prices);
+        assertEquals(expected.size(), result.size());
+        for (int i = 0; i < expected.size(); i++) {
+            assertEquals(expected.get(i), result.get(i), 1e-6,
+                "index=" + i + ", price=" + prices.get(i));
+        }
+    }
+
+    @Test
+    void shouldHandleZeroStartPriceInMaxDrawdowns() {
+        ReturnCalculator calculator = new ReturnCalculator();
+        List<Double> prices = List.of(0.0, 1.0, 2.0);
+        List<Double> expected = List.of(0.0, 0.0, 0.0);
+        List<Double> result = calculator.calculateMaxDrawdowns(prices);
+        assertEquals(expected.size(), result.size());
+        for (int i = 0; i < expected.size(); i++) {
+            assertEquals(expected.get(i), result.get(i), 1e-6, "index=" + i + ", price=" + prices.get(i));
+        }
+    }
 }
