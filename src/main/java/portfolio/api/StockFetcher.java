@@ -31,8 +31,7 @@ public class StockFetcher {
 
     @Cacheable(value = CacheConfig.StockFetcher_fetchHistory)
     public ChartResponse fetchHistory(String ticker, long period1, long period2) {
-        String interval = IntervalCalculator.calculateOptimalInterval(period1, period2);
-        log.info("Fetching history for {} from {} to {} with interval {}", ticker, period1, period2, interval);
+        String interval = IntervalCalculator.calculateOptimalInterval(period1, period2);        log.info("Fetching history for {} from {} to {} with interval {}", ticker, period1, period2, interval);
         return restClient.get()
                 .uri(uriBuilder -> uriBuilder
                         .scheme(scheme)
