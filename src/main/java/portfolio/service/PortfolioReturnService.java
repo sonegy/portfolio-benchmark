@@ -5,12 +5,15 @@ import org.springframework.stereotype.Service;
 import lombok.extern.slf4j.Slf4j;
 import portfolio.api.ChartResponse;
 import portfolio.api.ChartResponse.Dividend;
+import portfolio.model.Amount;
 import portfolio.model.PortfolioRequest;
 import portfolio.model.PortfolioReturnData;
+import portfolio.model.ReturnRate;
 import portfolio.model.StockReturnData;
 import portfolio.util.DateUtils;
 import portfolio.util.JsonLoggingUtils;
 
+import static java.util.Collections.emptyList;
 import static java.util.Objects.requireNonNullElse;
 
 import java.time.LocalDate;
@@ -149,50 +152,50 @@ public class PortfolioReturnService {
         }
 
         // Calculate returns
-        double priceReturn = returnCalculator.calculatePriceReturn(prices);
+        ReturnRate priceReturn = returnCalculator.calculatePriceReturn(prices);
         List<Dividend> dividends = extractDividends(chartResponse);
-        double totalReturn = includeDividends
+        ReturnRate totalReturn = includeDividends
                 ? returnCalculator.calculateTotalReturn(prices, timestamps, dividends)
                 : priceReturn;
 
         // Calculate CAGR using actual time period
         double startPrice = prices.get(0);
         double endPrice = startPrice * (includeDividends
-                ? totalReturn
-                : priceReturn) + startPrice;
+                ? totalReturn.rate()
+                : priceReturn.rate()) + startPrice;
         // prices.get(prices.size() - 1);
         log.debug("calculateStockReturn.startPrice:{} endPrice:{}", startPrice, endPrice);
 
         double years = calculateYearsBetweenPrices(chartResponse);
-        double cagr = years > 0 ? returnCalculator.calculateCAGR(startPrice, endPrice, years) : 0.0;
-        List<Double> intervalReturns = returnCalculator.calculateReturn(prices, timestamps, dividends);
-        double volatility = returnCalculator.calculateVolatility(intervalReturns);
+        double cagr = years > 0 ? returnCalculator.calculateCAGR(startPrice, endPrice, years).rate() : 0.0;
+        List<ReturnRate> periodicReturnRate = returnCalculator.calculatePeriodicReturnRates(prices, timestamps, dividends);
+        double volatility = returnCalculator.calculateVolatility(periodicReturnRate);
         log.debug("calculateStockReturn.ticker:{} volatility:{}", ticker, volatility);
 
-        // 누적 수익율 배당금 포함. 
-        List<Double> cumulativeReturns = returnCalculator.calculateCumulativeReturns(prices, timestamps, dividends);
+        // 누적 수익율 배당금 포함.
+        List<ReturnRate> cumulativeReturns = returnCalculator.calculateCumulativeReturns(prices, timestamps, dividends);
         // 누적 수익율 배당금 미포함.
-        List<Double> cumulativePriceReturns = returnCalculator.calculateCumulativeReturns(prices, timestamps, Collections.emptyList());
+        List<ReturnRate> cumulativePriceReturns = returnCalculator.calculateCumulativeReturns(prices, timestamps, emptyList());
 
         // 최대낙폭
         List<Double> maxDrawdowns = returnCalculator.calculateMaxDrawdowns(prices);
         log.debug("calculateStockReturn.ticker:{} maxDrawdowns:{}", ticker, maxDrawdowns);
 
-        StockReturnData stockReturnData = new StockReturnData(ticker, priceReturn, totalReturn, cagr, volatility);
-        stockReturnData.setCumulativeReturns(cumulativeReturns);
-        stockReturnData.setCumulativePriceReturns(cumulativePriceReturns);
+        StockReturnData stockReturnData = new StockReturnData(ticker, priceReturn.rate(), totalReturn.rate(), cagr, volatility);
+        stockReturnData.setCumulativeReturns(cumulativeReturns.stream().map(ReturnRate::rate).toList());
+        stockReturnData.setCumulativePriceReturns(cumulativePriceReturns.stream().map(ReturnRate::rate).toList());
         stockReturnData.setPrices(prices);
         stockReturnData.setTimestamps(timestamps);
         stockReturnData.setDates(extractDates(chartResponse));
-        stockReturnData.setIntervalReturns(intervalReturns);
+        stockReturnData.setIntervalReturns(periodicReturnRate.stream().map(ReturnRate::rate).toList());
         stockReturnData.setMaxDrawdowns(maxDrawdowns);
         stockReturnData.setMaxDrawdown(returnCalculator.calculateMaxValue(maxDrawdowns));
 
         // Calculate amount changes if initial amount is provided
         if (initialAmount > 0) {
-            List<Double> amountChanges = returnCalculator.calculateAmountChanges(prices, timestamps, dividends,
+            List<Amount> amountChanges = returnCalculator.calculateCumulativeAmounts(prices, timestamps, dividends,
                     initialAmount, weight);
-            stockReturnData.setAmountChanges(amountChanges);
+            stockReturnData.setAmountChanges(amountChanges.stream().map(Amount::amount).toList());
         }
 
         return stockReturnData;
@@ -284,26 +287,33 @@ public class PortfolioReturnService {
         List<Double> prices = returnCalculator.calculatePrices(priceReturns, 1.0);
         List<Double> maxDrawdowns = returnCalculator.calculateMaxDrawdowns(prices);
         Double maxDrawdown = returnCalculator.calculateMaxValue(maxDrawdowns);
-        for(int i = 0; i < maxDrawdowns.size(); i++) {
-            log.debug("calculatePortfolioReturnData.priceReturns:{} maxDrawdowns:{}", priceReturns.get(i), maxDrawdowns.get(i));
+        for (int i = 0; i < maxDrawdowns.size(); i++) {
+            log.debug("calculatePortfolioReturnData.priceReturns:{} maxDrawdowns:{}", priceReturns.get(i),
+                    maxDrawdowns.get(i));
         }
         log.debug("calculatePortfolioReturnData.maxDrawdown:{}", maxDrawdown);
 
         PortfolioReturnData portfolioData = new PortfolioReturnData(stockReturns);
-        List<LocalDate> dates = requireNonNullElse(stockReturns.get(0).getDates(), Collections.emptyList());
+        List<LocalDate> dates = requireNonNullElse(stockReturns.get(0).getDates(), emptyList());
+        LocalDate startDate = null;
+        LocalDate endDate = null;
         if (!dates.isEmpty()) {
-            portfolioData.setStartDate(dates.get(0));
-            portfolioData.setEndDate(dates.get(dates.size() - 1));
-            portfolioData.setDates(dates);
+            startDate = dates.get(0);
+            endDate = dates.get(dates.size() - 1);
         }
+
+        portfolioData.setStartDate(startDate);
+        portfolioData.setEndDate(endDate);
+        portfolioData.setDates(dates);
         portfolioData.setPortfolioPriceReturn(portfolioAnalyzer.calculatePortfolioPriceReturn(stockReturns, weights));
         portfolioData.setPortfolioTotalReturn(portfolioAnalyzer.calculatePortfolioTotalReturn(stockReturns, weights));
-        portfolioData.setPortfolioCAGR(portfolioAnalyzer.calculatePortfolioCAGR(stockReturns, weights));
-        portfolioData.setVolatility(portfolioAnalyzer.calculateVolatility(stockReturns, weights));
+        double cagr = portfolioAnalyzer.calculatePortfolioCAGR(stockReturns, weights);
+        portfolioData.setPortfolioCAGR(cagr);
+        double volatility = portfolioAnalyzer.calculateVolatility(stockReturns, weights);
+        portfolioData.setVolatility(volatility);
         portfolioData.setMaxDrawdowns(maxDrawdowns);
         portfolioData.setMaxDrawdown(maxDrawdown);
-        portfolioData.setSharpeRatio(portfolioAnalyzer.calculateSharpeRatio(portfolioData.getPortfolioTotalReturn(),
-                portfolioData.getVolatility()));
+        portfolioData.setSharpeRatio(portfolioAnalyzer.calculateSharpeRatio(stockReturns, weights));
         portfolioData.setPortfolioCumulativeReturns(
                 portfolioAnalyzer.calculatePortfolioCumulativeReturns(stockReturns, weights));
         return portfolioData;

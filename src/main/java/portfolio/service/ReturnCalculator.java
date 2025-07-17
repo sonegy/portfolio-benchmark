@@ -4,8 +4,14 @@ import java.util.ArrayList;
 import java.util.List;
 import org.springframework.stereotype.Service;
 
+import com.fasterxml.jackson.databind.module.SimpleModule;
+
 import lombok.extern.slf4j.Slf4j;
 import portfolio.api.ChartResponse.Dividend;
+import portfolio.model.Amount;
+import portfolio.model.CAGR;
+import portfolio.model.ReturnRate;
+import portfolio.model.Volatility;
 import portfolio.util.JsonLoggingUtils;
 
 /**
@@ -32,23 +38,21 @@ public class ReturnCalculator {
     }
 
     /**
-     * 가격 리스트의 첫 번째와 마지막 가격을 기준으로 단순 가격 수익률을 계산합니다.
+     * 가격 리스트의 첫 번째와 마지막 가격을 기준으로 단순 가격 수익률을 계산합니다. (Rate of Return)
      *
      * @param prices 최소 두 개 이상의 가격이 포함된 리스트 (시간순 정렬)
      * @return 가격 수익률(예: 0.1은 10% 수익률)
      * @throws IllegalArgumentException 가격 리스트가 2개 미만일 경우 발생합니다.
      */
-    public double calculatePriceReturn(List<Double> prices) {
+    public ReturnRate calculatePriceReturn(List<Double> prices) {
         validatePricesForReturn(prices);
-
         double startPrice = prices.get(0);
         double endPrice = prices.get(prices.size() - 1);
-
-        return (endPrice - startPrice) / startPrice;
+        return new ReturnRate(startPrice, endPrice);
     }
 
     /**
-     * 가격 변동과 배당 재투자를 모두 반영한 총수익률을 계산합니다.
+     * 가격 변동과 배당 재투자를 모두 반영한 총수익률을 계산합니다. (Rate of Return)
      * 배당금이 제공되지 않으면 단순 가격 수익률을 반환합니다.
      *
      * @param prices     가격 리스트 (시간순 정렬)
@@ -57,14 +61,14 @@ public class ReturnCalculator {
      * @return 총수익률(소수값, 예: 0.15는 15% 수익률)
      * @throws IllegalArgumentException 가격 리스트가 2개 미만일 경우 발생합니다.
      */
-    public double calculateTotalReturn(List<Double> prices, List<Long> timestamps, List<Dividend> dividends) {
+    public ReturnRate calculateTotalReturn(List<Double> prices, List<Long> timestamps, List<Dividend> dividends) {
         validatePricesForReturn(prices);
 
         if (dividends == null || dividends.isEmpty()) {
             return calculatePriceReturn(prices);
         }
 
-        List<Double> cumulativeReturns = calculateCumulativeReturns(prices, timestamps, dividends);
+        List<ReturnRate> cumulativeReturns = calculateCumulativeReturns(prices, timestamps, dividends);
         return cumulativeReturns.get(cumulativeReturns.size() - 1);
     }
 
@@ -77,7 +81,7 @@ public class ReturnCalculator {
      * @return CAGR(소수값, 예: 0.07은 연 7% 성장)
      * @throws IllegalArgumentException 시작값, 종료값, 기간이 0 이하일 경우 발생합니다.
      */
-    public double calculateCAGR(double startValue, double endValue, double years) {
+    public CAGR calculateCAGR(double startValue, double endValue, double years) {
         if (startValue <= 0) {
             throw new IllegalArgumentException("Start value must be positive");
         }
@@ -89,7 +93,7 @@ public class ReturnCalculator {
         }
 
         // CAGR = (End Value / Start Value)^(1/years) - 1
-        return Math.pow(endValue / startValue, 1.0 / years) - 1.0;
+        return new CAGR(startValue, endValue, years);
     }
 
     /**
@@ -106,20 +110,21 @@ public class ReturnCalculator {
      * @throws IllegalArgumentException 가격, 타임스탬프가 null/비어있거나 크기가 다르거나, 시작 가격이 0 이하인
      *                                  경우
      */
-    public List<Double> calculateCumulativeReturns(List<Double> prices, List<Long> timestamps,
+    public List<ReturnRate> calculateCumulativeReturns(List<Double> prices, List<Long> timestamps,
             List<Dividend> dividends) {
         double startPrice = prices.get(0);
         if (startPrice <= 0) {
             throw new IllegalArgumentException("Start price must be positive for cumulative return calculation.");
         }
 
-        List<Double> portfolioValues = calculatePortfolioValues(prices, timestamps, dividends, 1.0);
+        List<Amount> cumulativeValues = calculateCumulativeAmounts(prices, timestamps, dividends, 1.0);
 
-        List<Double> cumulativeReturns = new ArrayList<>();
-        for (double value : portfolioValues) {
-            cumulativeReturns.add((value - startPrice) / startPrice);
+        List<ReturnRate> cumulativeReturnRates = new ArrayList<>();
+        for (Amount amount : cumulativeValues) {
+            ReturnRate returnRate = new ReturnRate(startPrice, amount.amount());
+            cumulativeReturnRates.add(returnRate);
         }
-        return cumulativeReturns;
+        return cumulativeReturnRates;
     }
 
     /**
@@ -131,9 +136,9 @@ public class ReturnCalculator {
      * @param initialAmount 초기 투자 금액
      * @return 각 시점별 투자 가치 리스트
      */
-    public List<Double> calculateAmountChanges(List<Double> prices, List<Long> timestamps, List<Dividend> dividends,
+    public List<Amount> calculateAmountChanges(List<Double> prices, List<Long> timestamps, List<Dividend> dividends,
             double initialAmount) {
-        return calculateAmountChanges(prices, timestamps, dividends, initialAmount, 1.0);
+        return calculateCumulativeAmounts(prices, timestamps, dividends, initialAmount, 1.0);
     }
 
     /**
@@ -146,54 +151,54 @@ public class ReturnCalculator {
      * @param weight        이 자산에 투자할 비율(0.0~1.0)
      * @return 각 시점별 가중 투자 가치 리스트
      */
-    public List<Double> calculateAmountChanges(List<Double> prices, List<Long> timestamps, List<Dividend> dividends,
+    public List<Amount> calculateCumulativeAmounts(List<Double> prices, List<Long> timestamps, List<Dividend> dividends,
             double initialAmount, double weight) {
         double startPrice = prices.get(0);
         if (startPrice <= 0) {
-            List<Double> amountChanges = new ArrayList<>();
-            for (int i = 0; i < prices.size(); i++)
-                amountChanges.add(0.0);
+            List<Amount> amountChanges = new ArrayList<>();
+            for (int i = 0; i < prices.size(); i++) {
+                amountChanges.add(new Amount(0, prices.get(i)));
+            }
+            log.error("startPrice is less than or equal to 0");
             return amountChanges;
         }
 
         double allocatedAmount = initialAmount * weight;
         double initialShares = allocatedAmount / startPrice;
 
-        return calculatePortfolioValues(prices, timestamps, dividends, initialShares);
+        return calculateCumulativeAmounts(prices, timestamps, dividends, initialShares);
     }
 
     /**
      * 주어진 수익률 리스트의 변동성(표준편차)을 계산합니다.
      *
-     * @param returns 수익률 리스트
+     * @param periodicReturnRate 수익률 리스트
      * @return 변동성(표준편차)
      */
-    public double calculateVolatility(List<Double> returns) {
-        log.debug("calculateVolatility.returns {}", JsonLoggingUtils.toJsonPretty(returns));
-        double mean = returns.stream().mapToDouble(Double::doubleValue).average().orElse(0.0);
-        double variance = returns.stream().mapToDouble(r -> Math.pow(r - mean, 2)).average().orElse(0.0);
-        double volatility = Math.sqrt(variance);
-        log.debug("calculateVolatility.volatility {}", volatility);
-        return volatility;
+    public double calculateVolatility(List<ReturnRate> periodicReturnRates) {
+        return new Volatility(periodicReturnRates).volatility();
     }
 
     /**
      * 초기 투자금액 1.0으로 설정하고, 배당 재투자를 포함하여 시간에 따라 포트폴리오의 수익률을 계산합니다.
+     * timestamps에 따른 기간별 수익율
      *
      * @param prices     가격 리스트 (시간순 정렬)
      * @param timestamps 각 가격에 대응하는 타임스탬프 리스트
      * @param dividends  기간 중 지급된 배당금 리스트
      * @return 각 시점별 포트폴리오의 수익률 리스트
      */
-    public List<Double> calculateReturn(List<Double> prices, List<Long> timestamps, List<Dividend> dividends) {
-        List<Double> pList = calculatePortfolioValues(prices, timestamps, dividends, 1.0);
-        List<Double> returns = new ArrayList<>();
+    public List<ReturnRate> calculatePeriodicReturnRates(List<Double> prices, List<Long> timestamps,
+            List<Dividend> dividends) {
+        List<Amount> pList = calculateCumulativeAmounts(prices, timestamps, dividends, 1.0);
+        List<ReturnRate> returns = new ArrayList<>();
         for (int i = 1; i < pList.size(); i++) {
-            Double current = pList.get(i);
-            Double prev = pList.get(i - 1);
-            double r = (current - prev) / prev;
-            log.debug("calculateReturn {} current {} prev {} r {}", i, current, prev, r);
-            returns.add(r);
+            Double current = pList.get(i).amount();
+            Double prev = pList.get(i - 1).amount();
+            // double r = (current - prev) / prev;
+            ReturnRate returnRate = new ReturnRate(prev, current);
+            log.debug("calculateReturn {} current {} prev {} r {}", i, current, prev, returnRate);
+            returns.add(returnRate);
         }
         return returns;
     }
@@ -234,7 +239,8 @@ public class ReturnCalculator {
      * @param initialShares 초기 보유 주식 수
      * @return 각 시점별 포트폴리오 가치 리스트
      */
-    private List<Double> calculatePortfolioValues(List<Double> prices, List<Long> timestamps, List<Dividend> dividends,
+    private List<Amount> calculateCumulativeAmounts(List<Double> prices, List<Long> timestamps,
+            List<Dividend> dividends,
             double initialShares) {
         if (prices == null || prices.isEmpty() || timestamps == null || timestamps.isEmpty()) {
             throw new IllegalArgumentException("Prices and timestamps lists cannot be null or empty");
@@ -243,7 +249,7 @@ public class ReturnCalculator {
             throw new IllegalArgumentException("Prices and timestamps lists must have the same size");
         }
 
-        List<Double> portfolioValues = new ArrayList<>();
+        List<Amount> cumulativeAmounts = new ArrayList<>();
 
         // Create a mutable, sorted copy of dividends to avoid modifying the original
         // list
@@ -281,11 +287,10 @@ public class ReturnCalculator {
                 cash = 0;
             }
 
-            double portfolioValue = shares * currentPrice;
-            portfolioValues.add(portfolioValue);
+            cumulativeAmounts.add(new Amount(shares, currentPrice));
         }
 
-        return portfolioValues;
+        return cumulativeAmounts;
     }
 
     public Double calculateMaxValue(List<Double> values) {
@@ -303,5 +308,17 @@ public class ReturnCalculator {
     public List<Double> calculatePrices(List<Double> priceReturns, double initialAmount) {
         List<Double> prices = priceReturns.stream().map(d -> initialAmount + (d * initialAmount)).toList();
         return prices;
+    }
+
+    /**
+     * 주어진 수익률 리스트의 샤르프비율을 계산합니다.
+     * 
+     * @param periodicReturnRates
+     * @return
+     */
+    public double calculateSharpeRatio(List<ReturnRate> periodicReturnRates) {
+        double meanReturnRate = periodicReturnRates.stream().mapToDouble(ReturnRate::rate).average().orElse(0.0);
+        double standardDeviation = new Volatility(periodicReturnRates).standardDeviation();
+        return (meanReturnRate - (0.04 / 12)) / standardDeviation * Math.sqrt(periodicReturnRates.size());
     }
 }

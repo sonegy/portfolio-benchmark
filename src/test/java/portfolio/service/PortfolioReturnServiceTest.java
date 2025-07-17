@@ -7,8 +7,10 @@ import org.mockito.MockitoAnnotations;
 
 import lombok.extern.slf4j.Slf4j;
 import portfolio.api.ChartResponse;
+import portfolio.model.CAGR;
 import portfolio.model.PortfolioRequest;
 import portfolio.model.PortfolioReturnData;
+import portfolio.model.ReturnRate;
 import portfolio.model.StockReturnData;
 
 import java.text.SimpleDateFormat;
@@ -113,9 +115,9 @@ class PortfolioReturnServiceTest {
                 .thenReturn(CompletableFuture.completedFuture(mockData));
         when(portfolioDataService.fetchMultipleDividends(anyList(), anyLong(), anyLong()))
                 .thenReturn(CompletableFuture.completedFuture(mockDividendData));
-        when(returnCalculator.calculatePriceReturn(anyList())).thenReturn(0.10);
-        when(returnCalculator.calculateTotalReturn(anyList(), anyList(), anyList())).thenReturn(0.12);
-        when(returnCalculator.calculateCAGR(anyDouble(), anyDouble(), anyInt())).thenReturn(0.11);
+        when(returnCalculator.calculatePriceReturn(anyList())).thenReturn(new ReturnRate(100.0, 110.0));
+        when(returnCalculator.calculateTotalReturn(anyList(), anyList(), anyList())).thenReturn(new ReturnRate(100.0, 112.0));
+        when(returnCalculator.calculateCAGR(anyDouble(), anyDouble(), anyInt())).thenReturn(new CAGR(100.0, 112.0, 1));
 
         // When
         PortfolioReturnData result = portfolioReturnService.analyzePortfolio(request);
@@ -142,9 +144,9 @@ class PortfolioReturnServiceTest {
 
         when(portfolioDataService.fetchMultipleStocks(anyList(), anyLong(), anyLong()))
                 .thenReturn(CompletableFuture.completedFuture(stockData));
-        when(returnCalculator.calculatePriceReturn(anyList())).thenReturn(0.15);
-        when(returnCalculator.calculateTotalReturn(anyList(), anyList(), anyList())).thenReturn(0.15);
-        when(returnCalculator.calculateCAGR(anyDouble(), anyDouble(), anyDouble())).thenReturn(0.15);
+        when(returnCalculator.calculatePriceReturn(anyList())).thenReturn(new ReturnRate(100, 115));
+        when(returnCalculator.calculateTotalReturn(anyList(), anyList(), anyList())).thenReturn(new ReturnRate(100, 115));
+        when(returnCalculator.calculateCAGR(anyDouble(), anyDouble(), anyDouble())).thenReturn(new CAGR(100, 115, 1));
 
         // When
         PortfolioReturnData result = portfolioReturnService.analyzePortfolio(request);

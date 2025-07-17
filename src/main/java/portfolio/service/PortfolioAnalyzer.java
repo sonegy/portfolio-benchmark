@@ -5,7 +5,9 @@ import java.util.List;
 import org.springframework.stereotype.Service;
 
 import lombok.extern.slf4j.Slf4j;
+import portfolio.model.ReturnRate;
 import portfolio.model.StockReturnData;
+import portfolio.model.Volatility;
 
 @Slf4j
 @Service
@@ -61,18 +63,16 @@ public class PortfolioAnalyzer {
                 throw new IllegalArgumentException("All intervalReturns must have the same length");
         }
         // 각 기간별 포트폴리오 수익률 시계열 계산
-        List<Double> portfolioReturns = new ArrayList<>();
+        List<Double> returnRateValues = new ArrayList<>();
         for (int t = 0; t < periods; t++) {
             double r = 0.0;
             for (int i = 0; i < n; i++) {
                 r += finalWeights.get(i) * returnsInStocks.get(i).get(t);
             }
-            portfolioReturns.add(r);
+            returnRateValues.add(r);
         }
-        // 표준편차 계산
-        double mean = portfolioReturns.stream().mapToDouble(Double::doubleValue).average().orElse(0.0);
-        double variance = portfolioReturns.stream().mapToDouble(r -> Math.pow(r - mean, 2)).average().orElse(0.0);
-        return Math.sqrt(variance);
+        List<ReturnRate> returnRates = returnRateValues.stream().map(value -> new ReturnRate(value)).toList();
+        return new Volatility(returnRates).volatility();
     }
 
     public double calculatePortfolioPriceReturn(List<StockReturnData> stockReturns, List<Double> weights) {
@@ -190,26 +190,6 @@ public class PortfolioAnalyzer {
         }
     }
 
-    /**
-     * portfolioTotalReturn, volatility 이 먼저 계산되어야 한다.
-     * 
-     * @param portfolioData
-     * @return
-     */
-    public double calculateSharpeRatio(double portfolioTotalReturn, double volatility) {
-        double meanReturn = portfolioTotalReturn;
-
-        // Assuming a risk-free rate of 0 for simplicity. This can be made configurable.
-        double riskFreeRate = 0.0;
-
-        if (volatility == 0.0) {
-            return 0.0; // Or throw an exception, depending on desired behavior
-        }
-
-        // Sharpe Ratio = (Mean Return - Risk Free Rate) / Volatility
-        return (meanReturn - riskFreeRate) / volatility;
-    }
-
     public double calculateCorrelation(List<Double> returns1, List<Double> returns2) {
         validateReturnsNotNullOrEmpty(returns1, "Returns1");
         validateReturnsNotNullOrEmpty(returns2, "Returns2");
@@ -247,5 +227,29 @@ public class PortfolioAnalyzer {
 
         // Correlation = Covariance / (StdDev1 * StdDev2)
         return (covariance / returns1.size()) / (stdDev1 * stdDev2);
+    }
+
+    public double calculateSharpeRatio(List<StockReturnData> stockReturns, List<Double> weights) {
+        List<List<Double>> returnsInStocks = stockReturns.stream().map(stock -> stock.getIntervalReturns()).toList();
+        List<Double> finalWeights = getFinalWeights(stockReturns.size(), weights);
+
+        int n = returnsInStocks.size();
+        int periods = returnsInStocks.get(0).size();
+        // 각 ticker의 intervalReturns 길이 체크
+        for (List<Double> returns : returnsInStocks) {
+            if (returns.size() != periods)
+                throw new IllegalArgumentException("All intervalReturns must have the same length");
+        }
+        // 각 기간별 포트폴리오 수익률 시계열 계산
+        List<Double> returnRateValues = new ArrayList<>();
+        for (int t = 0; t < periods; t++) {
+            double r = 0.0;
+            for (int i = 0; i < n; i++) {
+                r += finalWeights.get(i) * returnsInStocks.get(i).get(t);
+            }
+            returnRateValues.add(r);
+        }
+        List<ReturnRate> returnRates = returnRateValues.stream().map(value -> new ReturnRate(value)).toList();
+        return new ReturnCalculator().calculateSharpeRatio(returnRates);
     }
 }

@@ -10,6 +10,7 @@ import java.time.LocalDate;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
 import portfolio.api.ChartResponse.Dividend;
+import portfolio.model.Amount;
 
 class ReturnCalculatorAmountTest {
 
@@ -32,12 +33,12 @@ class ReturnCalculatorAmountTest {
         double initialAmount = 1000.0;
 
         // When
-        List<Double> amountChanges = returnCalculator.calculateAmountChanges(prices, timestamps, new ArrayList<>(), initialAmount);
+        List<Amount> amountChanges = returnCalculator.calculateAmountChanges(prices, timestamps, new ArrayList<>(), initialAmount);
 
         // Then
-        assertEquals(1000.0, amountChanges.get(0), 0.001);
-        assertEquals(1100.0, amountChanges.get(1), 0.001);
-        assertEquals(1200.0, amountChanges.get(2), 0.001);
+        assertEquals(1000.0, amountChanges.get(0).amount(), 0.001);
+        assertEquals(1100.0, amountChanges.get(1).amount(), 0.001);
+        assertEquals(1200.0, amountChanges.get(2).amount(), 0.001);
     }
 
     @Test
@@ -56,21 +57,21 @@ class ReturnCalculatorAmountTest {
         double initialAmount = 1000.0;
 
         // When
-        List<Double> amountChanges = returnCalculator.calculateAmountChanges(prices, timestamps, dividends, initialAmount);
+        List<Amount> amountChanges = returnCalculator.calculateAmountChanges(prices, timestamps, dividends, initialAmount);
 
         // Then
         // Day 1: Initial amount is 1000.0. Shares = 1000 / 100 = 10.
-        assertEquals(1000.0, amountChanges.get(0), 0.001);
+        assertEquals(1000.0, amountChanges.get(0).amount(), 0.001);
 
         // Day 2: Price is 110. Dividend of 2.0/share is paid.
         // Cash from dividend = 10 shares * 2.0 = 20.0.
         // Reinvest cash: 20.0 / 110 = 0.181818... shares. Total shares = 10.181818...
         // Value = 10.181818... * 110 = 1120.0
-        assertEquals(1120.0, amountChanges.get(1), 0.001);
+        assertEquals(1120.0, amountChanges.get(1).amount(), 0.001);
 
         // Day 3: Price is 108.
         // Value = 10.181818... * 108 = 1099.636
-        assertEquals(1099.636, amountChanges.get(2), 0.001);
+        assertEquals(1099.636, amountChanges.get(2).amount(), 0.001);
     }
 
     @Test
@@ -89,17 +90,17 @@ class ReturnCalculatorAmountTest {
         double weight = 0.5; // 50% allocated
 
         // When
-        List<Double> amountChanges = returnCalculator.calculateAmountChanges(prices, timestamps, dividends, initialAmount, weight);
+        List<Amount> amountChanges = returnCalculator.calculateCumulativeAmounts(prices, timestamps, dividends, initialAmount, weight);
 
         // Then
         // Day 1: Allocated amount = 1000 * 0.5 = 500.0. Shares = 500 / 100 = 5.
-        assertEquals(500.0, amountChanges.get(0), 0.001);
+        assertEquals(500.0, amountChanges.get(0).amount(), 0.001);
 
         // Day 2: Price is 110. Dividend of 2.0/share.
         // Cash = 5 shares * 2.0 = 10.0.
         // Reinvest: 10.0 / 110 = 0.090909... shares. Total shares = 5.090909...
         // Value = 5.090909... * 110 = 560.0
-        assertEquals(560.0, amountChanges.get(1), 0.001);
+        assertEquals(560.0, amountChanges.get(1).amount(), 0.001);
     }
 
     @Test
@@ -113,10 +114,10 @@ class ReturnCalculatorAmountTest {
         double initialAmount = 1000.0;
 
         // When
-        List<Double> amountChanges = returnCalculator.calculateAmountChanges(prices, timestamps, new ArrayList<>(), initialAmount);
+        List<Amount> amountChanges = returnCalculator.calculateAmountChanges(prices, timestamps, new ArrayList<>(), initialAmount);
 
         // Then
-        assertEquals(1000.0, amountChanges.get(0), 0.001);
-        assertEquals(1100.0, amountChanges.get(1), 0.001);
+        assertEquals(1000.0, amountChanges.get(0).amount(), 0.001);
+        assertEquals(1100.0, amountChanges.get(1).amount(), 0.001);
     }
 }

@@ -55,4 +55,29 @@ class StockFetcherIntegrationTest {
         System.out.println("First close: " + close.get(0));
         System.out.println("Last close: " + close.get(close.size() - 1));
     }
+
+    @Test
+    void fetchHistory_VOO() {
+        // given
+        String ticker = "VOO";
+        long period1 = java.time.LocalDate.parse("2024-01-01").atStartOfDay(java.time.ZoneId.of("America/New_York")).toEpochSecond();
+        long period2 = java.time.LocalDate.parse("2024-12-31").atStartOfDay(java.time.ZoneId.of("America/New_York")).toEpochSecond();
+
+        // when
+        ChartResponse response = fetcher.fetchHistory(ticker, period1, period2);
+        String dataGranularity = response.getChart().getResult().get(0).getMeta().getDataGranularity();
+        log.info("fetchHistory_VOO.dataGranularity {}", dataGranularity);
+
+        // then
+        assertNotNull(response);
+        assertNotNull(response.getChart());
+        assertNotNull(response.getChart().getResult());
+        java.util.List<portfolio.api.ChartResponse.Result> results = response.getChart().getResult();
+        assertFalse(results.isEmpty());
+        portfolio.api.ChartResponse.Result result = results.get(0);
+        java.util.List<Double> close = result.getIndicators().getQuote().get(0).getClose();
+        assertFalse(close.isEmpty());
+
+        log.info("{}", close);
+    }
 }

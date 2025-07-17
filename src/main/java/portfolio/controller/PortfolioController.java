@@ -147,6 +147,7 @@ public class PortfolioController {
             LocalDate end = request.getEndDate();
             request.setStartDate(start.withDayOfMonth(1));
             request.setEndDate(end.withDayOfMonth(end.lengthOfMonth()));
+            log.debug("adjustToPreviousMonthLastDay startDate {} endDate {}", request.getStartDate(), request.getEndDate());
         }
     }
 
