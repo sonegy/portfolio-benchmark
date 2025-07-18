@@ -7,7 +7,6 @@ import portfolio.model.StockReturnData;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -19,6 +18,7 @@ import java.util.Map;
 @Service
 public class ChartGenerator {
 
+    private static final String PORTFOLIO = "Portfolio";
     private final ChartConfigurationService configurationService;
 
     public ChartGenerator(ChartConfigurationService configurationService) {
@@ -33,11 +33,14 @@ public class ChartGenerator {
         List<LocalDate> dates = null;
 
         // 포트폴리오 데이터를 먼저 추가하여 차트에서 가장 앞에 오도록 설정
-        if (portfolioData.getPortfolioCumulativeReturns() != null) {
-            series.put("Portfolio", portfolioData.getPortfolioCumulativeReturns());
+        final StockReturnData portfolioStockReturn = portfolioData.getPortfolioStockReturn();
+        final List<StockReturnData> stockReturns = portfolioData.getStockReturns();
+
+        if (portfolioStockReturn.getCumulativeReturns() != null) {
+            series.put(PORTFOLIO, portfolioStockReturn.getCumulativeReturns());
         }
 
-        for (StockReturnData stockData : portfolioData.getStockReturns()) {
+        for (StockReturnData stockData : stockReturns) {
             series.put(stockData.getTicker(), stockData.getCumulativeReturns());
             if (dates == null) {
                 dates = stockData.getDates();
@@ -60,22 +63,25 @@ public class ChartGenerator {
     public ChartData generateComparisonChart(PortfolioReturnData portfolioData) {
         Map<String, List<Double>> series = new HashMap<>();
 
-        List<Double> priceReturns = new ArrayList<>();
-        priceReturns.add(portfolioData.getPortfolioPriceReturn());
-        priceReturns.addAll(portfolioData.getStockReturns().stream()
+        final List<Double> priceReturns = new ArrayList<>();
+        final StockReturnData portfolioStock = portfolioData.getPortfolioStockReturn();
+        final List<StockReturnData> stockReturns = portfolioData.getStockReturns();
+
+        priceReturns.add(portfolioStock.getPriceReturn());
+        priceReturns.addAll(stockReturns.stream()
                 .map(StockReturnData::getPriceReturn)
                 .toList());
 
         List<Double> totalReturns = new ArrayList<>();
-        totalReturns.add(portfolioData.getPortfolioTotalReturn());
-        totalReturns.addAll(portfolioData.getStockReturns().stream()
+        totalReturns.add(portfolioStock.getTotalReturn());
+        totalReturns.addAll(stockReturns.stream()
                 .map(StockReturnData::getTotalReturn)
                 .toList());
 
         // 주식 심볼 라벨 추출
         List<String> labels = new ArrayList<>();
-        labels.add("Portfolio");
-        labels.addAll(portfolioData.getStockReturns().stream()
+        labels.add(PORTFOLIO);
+        labels.addAll(stockReturns.stream()
                 .map(StockReturnData::getTicker)
                 .toList());
 
@@ -94,35 +100,6 @@ public class ChartGenerator {
         );
     }
 
-    // /**
-    //  * 누적 수익률 차트 데이터 생성
-    //  */
-    // public ChartData generateCumulativeReturnChart(PortfolioReturnData portfolioData) {
-    //     Map<String, List<Double>> series = new LinkedHashMap<>();
-    //     List<LocalDate> dates = null;
-
-    //     // 포트폴리오 데이터를 먼저 추가하여 차트에서 가장 앞에 오도록 설정
-    //     if (portfolioData.getPortfolioCumulativeReturns() != null) {
-    //         series.put("Portfolio", portfolioData.getPortfolioCumulativeReturns());
-    //     }
-
-    //     for (StockReturnData stockData : portfolioData.getStockReturns()) {
-    //         series.put(stockData.getTicker(), stockData.getCumulativeReturns());
-    //         if (dates == null && stockData.getDates() != null && !stockData.getDates().isEmpty()) {
-    //             dates = stockData.getDates();
-    //         }
-    //     }
-
-    //     ChartData.ChartConfiguration config = configurationService.createLineChartConfiguration();
-
-    //     return new ChartData(
-    //             "Cumulative Returns",
-    //             "line",
-    //             dates,
-    //             series,
-    //             config);
-    // }
-
     /**
      * 금액 변화 차트 데이터 생성
      */
@@ -131,8 +108,9 @@ public class ChartGenerator {
         List<LocalDate> dates = null;
 
         // 포트폴리오 전체 금액 변화 계산
-        List<Double> portfolioAmounts = calculatePortfolioAmounts(portfolioData);
-        series.put("Portfolio", portfolioAmounts);
+        final StockReturnData portfolioStockReturn = portfolioData.getPortfolioStockReturn();
+        List<Double> portfolioAmounts = portfolioStockReturn.getAmountChanges();
+        series.put(PORTFOLIO, portfolioAmounts);
 
         // 개별 주식 금액 변화
         for (StockReturnData stockData : portfolioData.getStockReturns()) {
@@ -152,39 +130,5 @@ public class ChartGenerator {
                 dates,
                 series,
                 config);
-    }
-
-    /**
-     * 포트폴리오 전체 금액 변화 계산
-     */
-    private List<Double> calculatePortfolioAmounts(PortfolioReturnData portfolioData) {
-        List<StockReturnData> stockReturns = portfolioData.getStockReturns();
-        if (stockReturns.isEmpty()) {
-            return List.of();
-        }
-
-        // 첫 번째 주식의 날짜 수를 기준으로 함
-        int dateCount = stockReturns.get(0).getAmountChanges() != null ? stockReturns.get(0).getAmountChanges().size()
-                : 0;
-
-        if (dateCount == 0) {
-            return List.of();
-        }
-
-        List<Double> portfolioAmounts = new ArrayList<>();
-
-        for (int i = 0; i < dateCount; i++) {
-            double totalAmount = 0.0;
-
-            for (StockReturnData stockData : stockReturns) {
-                if (stockData.getAmountChanges() != null && i < stockData.getAmountChanges().size()) {
-                    totalAmount += stockData.getAmountChanges().get(i);
-                }
-            }
-
-            portfolioAmounts.add(totalAmount);
-        }
-
-        return portfolioAmounts;
     }
 }

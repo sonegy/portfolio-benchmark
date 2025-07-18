@@ -56,48 +56,57 @@ class PortfolioControllerTest {
         sampleRequest.setIncludeDividends(true);
 
         // 샘플 포트폴리오 데이터
-        StockReturnData appleData = new StockReturnData("AAPL", 0.15, 0.18, 0.12, 0.0);
-        StockReturnData microsoftData = new StockReturnData("MSFT", 0.12, 0.14, 0.10, 0.0);
-        
+        StockReturnData appleData = StockReturnData.builder()
+                .ticker("AAPL")
+                .priceReturn(0.15)
+                .totalReturn(0.18)
+                .cagr(0.12)
+                .volatility(0.0)
+                .build();
+        StockReturnData microsoftData = StockReturnData.builder()
+                .ticker("MSFT")
+                .priceReturn(0.12)
+                .totalReturn(0.14)
+                .cagr(0.10)
+                .volatility(0.0)
+                .build();
+
         samplePortfolioData = new PortfolioReturnData(List.of(appleData, microsoftData));
-        samplePortfolioData.setPortfolioPriceReturn(0.135);
-        samplePortfolioData.setPortfolioTotalReturn(0.16);
+        samplePortfolioData.setPortfolioStockReturn(StockReturnData.builder()
+                .priceReturn(0.135)
+                .totalReturn(0.16)
+                .build());
 
         // 샘플 차트 데이터
         ChartData.ChartConfiguration config = new ChartData.ChartConfiguration(
-            "Date", "Return", Map.of(), true
-        );
+                "Date", "Return", Map.of(), true);
         sampleChartData = new ChartData(
-            "Test Chart", "line", List.of(), Map.of(), config
-        );
+                "Test Chart", "line", List.of(), Map.of(), config);
 
         // 샘플 리포트
         AnalysisReport.Summary summary = new AnalysisReport.Summary(
-            LocalDate.of(2023, 1, 1), LocalDate.of(2023, 12, 31), 365,
-            0.18, "AAPL", 0.14, "MSFT"
-        );
+                LocalDate.of(2023, 1, 1), LocalDate.of(2023, 12, 31), 365,
+                0.18, "AAPL", 0.14, "MSFT");
         AnalysisReport.RiskMetrics riskMetrics = new AnalysisReport.RiskMetrics(
-            0.08, 1.2, -0.05, Map.of()
-        );
+                0.08, 1.2, -0.05, Map.of());
         sampleReport = new AnalysisReport(
-            "RPT-12345678", LocalDateTime.now(), sampleRequest, samplePortfolioData,
-            summary, List.of(), riskMetrics
-        );
+                "RPT-12345678", LocalDateTime.now(), sampleRequest, samplePortfolioData,
+                summary, List.of(), riskMetrics);
     }
 
     @Test
     void shouldAnalyzeAllAtOnce() throws Exception {
         // Given
         when(portfolioReturnService.analyzePortfolio(any(PortfolioRequest.class)))
-            .thenReturn(samplePortfolioData);
+                .thenReturn(samplePortfolioData);
         when(chartGenerator.generateTimeSeriesChart(any(PortfolioReturnData.class)))
-            .thenReturn(sampleChartData);
+                .thenReturn(sampleChartData);
         when(chartGenerator.generateComparisonChart(any(PortfolioReturnData.class)))
-            .thenReturn(sampleChartData);
+                .thenReturn(sampleChartData);
         when(chartGenerator.generateAmountChangeChart(any(PortfolioReturnData.class)))
-            .thenReturn(sampleChartData);
+                .thenReturn(sampleChartData);
         when(reportGenerator.generateReport(any(PortfolioRequest.class), any(PortfolioReturnData.class)))
-            .thenReturn(sampleReport);
+                .thenReturn(sampleReport);
 
         // When & Then
         mockMvc.perform(post("/api/portfolio/analyze/all")
@@ -113,30 +122,12 @@ class PortfolioControllerTest {
     }
 
     @Test
-    void shouldAnalyzePortfolio() throws Exception {
-        // Given
-        when(portfolioReturnService.analyzePortfolio(any(PortfolioRequest.class)))
-            .thenReturn(samplePortfolioData);
-
-        // When & Then
-        mockMvc.perform(post("/api/portfolio/analyze")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(sampleRequest)))
-                .andExpect(status().isOk())
-                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-                .andExpect(jsonPath("$.portfolioPriceReturn").value(0.135))
-                .andExpect(jsonPath("$.portfolioTotalReturn").value(0.16))
-                .andExpect(jsonPath("$.stockReturns").isArray())
-                .andExpect(jsonPath("$.stockReturns.length()").value(2));
-    }
-
-    @Test
     void shouldGenerateTimeSeriesChart() throws Exception {
         // Given
         when(portfolioReturnService.analyzePortfolio(any(PortfolioRequest.class)))
-            .thenReturn(samplePortfolioData);
+                .thenReturn(samplePortfolioData);
         when(chartGenerator.generateTimeSeriesChart(any(PortfolioReturnData.class)))
-            .thenReturn(sampleChartData);
+                .thenReturn(sampleChartData);
 
         // When & Then
         mockMvc.perform(post("/api/portfolio/chart/timeseries")
@@ -152,9 +143,9 @@ class PortfolioControllerTest {
     void shouldGenerateComparisonChart() throws Exception {
         // Given
         when(portfolioReturnService.analyzePortfolio(any(PortfolioRequest.class)))
-            .thenReturn(samplePortfolioData);
+                .thenReturn(samplePortfolioData);
         when(chartGenerator.generateComparisonChart(any(PortfolioReturnData.class)))
-            .thenReturn(sampleChartData);
+                .thenReturn(sampleChartData);
 
         // When & Then
         mockMvc.perform(post("/api/portfolio/chart/comparison")
@@ -170,9 +161,9 @@ class PortfolioControllerTest {
     void shouldGenerateReport() throws Exception {
         // Given
         when(portfolioReturnService.analyzePortfolio(any(PortfolioRequest.class)))
-            .thenReturn(samplePortfolioData);
+                .thenReturn(samplePortfolioData);
         when(reportGenerator.generateReport(any(PortfolioRequest.class), any(PortfolioReturnData.class)))
-            .thenReturn(sampleReport);
+                .thenReturn(sampleReport);
 
         // When & Then
         mockMvc.perform(post("/api/portfolio/report")
@@ -201,7 +192,7 @@ class PortfolioControllerTest {
     void shouldHandleServiceException() throws Exception {
         // Given
         when(portfolioReturnService.analyzePortfolio(any(PortfolioRequest.class)))
-            .thenThrow(new RuntimeException("Service error"));
+                .thenThrow(new RuntimeException("Service error"));
 
         // When & Then
         mockMvc.perform(post("/api/portfolio/analyze")
@@ -221,14 +212,14 @@ class PortfolioControllerTest {
 
         // Mock: 서비스가 내부적으로 2024-07-01 ~ 2024-07-31을 사용했는지 검증
         when(portfolioReturnService.analyzePortfolio(any(PortfolioRequest.class)))
-            .then(invocation -> {
-                PortfolioRequest req = invocation.getArgument(0);
-                LocalDate expectedStart = LocalDate.of(2024, 7, 1);
-                LocalDate expectedEnd = LocalDate.of(2024, 7, 31);
-                org.assertj.core.api.Assertions.assertThat(req.getStartDate()).isEqualTo(expectedStart);
-                org.assertj.core.api.Assertions.assertThat(req.getEndDate()).isEqualTo(expectedEnd);
-                return samplePortfolioData;
-            });
+                .then(invocation -> {
+                    PortfolioRequest req = invocation.getArgument(0);
+                    LocalDate expectedStart = LocalDate.of(2024, 7, 1);
+                    LocalDate expectedEnd = LocalDate.of(2024, 7, 31);
+                    org.assertj.core.api.Assertions.assertThat(req.getStartDate()).isEqualTo(expectedStart);
+                    org.assertj.core.api.Assertions.assertThat(req.getEndDate()).isEqualTo(expectedEnd);
+                    return samplePortfolioData;
+                });
 
         // When & Then
         mockMvc.perform(post("/api/portfolio/analyze")

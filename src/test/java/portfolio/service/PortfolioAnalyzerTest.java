@@ -39,10 +39,22 @@ public class PortfolioAnalyzerTest {
 
     @Test
     void shouldCalculatePortfolioCumulativeReturns() {
-        StockReturnData a = new StockReturnData("A", 0, 0, 0, 0.0);
-        StockReturnData b = new StockReturnData("B", 0, 0, 0, 0.0);
-        a.setCumulativeReturns(Arrays.asList(0.0, 0.1, 0.2));
-        b.setCumulativeReturns(Arrays.asList(0.0, 0.05, 0.15));
+        StockReturnData a = StockReturnData.builder()
+                .ticker("A")
+                .priceReturn(0)
+                .totalReturn(0)
+                .cagr(0)
+                .volatility(0.0)
+                .cumulativeReturns(Arrays.asList(0.0, 0.1, 0.2))
+                .build();
+        StockReturnData b = StockReturnData.builder()
+                .ticker("B")
+                .priceReturn(0)
+                .totalReturn(0)
+                .cagr(0)
+                .volatility(0.0)
+                .cumulativeReturns(Arrays.asList(0.0, 0.05, 0.15))
+                .build();
         List<StockReturnData> stocks = Arrays.asList(a, b);
         List<Double> weights = Arrays.asList(0.6, 0.4);
         PortfolioAnalyzer analyzer = new PortfolioAnalyzer();
@@ -56,10 +68,22 @@ public class PortfolioAnalyzerTest {
 
     @Test
     void shouldCalculatePortfolioCumulativePriceReturns() {
-        StockReturnData a = new StockReturnData("A", 0, 0, 0, 0.0);
-        StockReturnData b = new StockReturnData("B", 0, 0, 0, 0.0);
-        a.setCumulativePriceReturns(Arrays.asList(0.0, 0.2, 0.4));
-        b.setCumulativePriceReturns(Arrays.asList(0.0, 0.1, 0.3));
+        StockReturnData a = StockReturnData.builder()
+                .ticker("A")
+                .priceReturn(0)
+                .totalReturn(0)
+                .cagr(0)
+                .volatility(0.0)
+                .cumulativePriceReturns(Arrays.asList(0.0, 0.2, 0.4))
+                .build();
+        StockReturnData b = StockReturnData.builder()
+                .ticker("B")
+                .priceReturn(0)
+                .totalReturn(0)
+                .cagr(0)
+                .volatility(0.0)
+                .cumulativePriceReturns(Arrays.asList(0.0, 0.1, 0.3))
+                .build();
         List<StockReturnData> stocks = Arrays.asList(a, b);
         List<Double> weights = Arrays.asList(0.7, 0.3);
         PortfolioAnalyzer analyzer = new PortfolioAnalyzer();
@@ -76,8 +100,10 @@ public class PortfolioAnalyzerTest {
         PortfolioAnalyzer analyzer = new PortfolioAnalyzer();
         assertTrue(analyzer.calculatePortfolioCumulativeReturns(null, Arrays.asList(1.0)).isEmpty());
         assertTrue(analyzer.calculatePortfolioCumulativeReturns(Arrays.asList(), Arrays.asList(1.0)).isEmpty());
-        assertTrue(analyzer.calculatePortfolioCumulativeReturns(Arrays.asList(new StockReturnData("A",0,0,0,0.0)), null).isEmpty());
-        assertTrue(analyzer.calculatePortfolioCumulativeReturns(Arrays.asList(new StockReturnData("A",0,0,0,0.0)), Arrays.asList()).isEmpty());
+        assertTrue(analyzer.calculatePortfolioCumulativeReturns(Arrays.asList(
+            StockReturnData.builder().ticker("A").priceReturn(0).totalReturn(0).cagr(0).volatility(0.0).build()), null).isEmpty());
+        assertTrue(analyzer.calculatePortfolioCumulativeReturns(Arrays.asList(
+            StockReturnData.builder().ticker("A").priceReturn(0).totalReturn(0).cagr(0).volatility(0.0).build()), Arrays.asList()).isEmpty());
     
     }
 }

@@ -11,11 +11,12 @@ class StockReturnDataAmountTest {
     @Test
     void shouldSetAndGetAmountChanges() {
         // Given
-        StockReturnData stockData = new StockReturnData();
         List<Double> amountChanges = List.of(10000.0, 11000.0, 10500.0, 12000.0);
 
         // When
-        stockData.setAmountChanges(amountChanges);
+        StockReturnData stockData = StockReturnData.builder()
+            .amountChanges(amountChanges)
+            .build();
 
         // Then
         assertEquals(amountChanges, stockData.getAmountChanges());
@@ -31,8 +32,14 @@ class StockReturnDataAmountTest {
         List<Double> amountChanges = List.of(10000.0, 11500.0, 11800.0);
 
         // When
-        StockReturnData stockData = new StockReturnData(ticker, priceReturn, totalReturn, cagr, 0.0);
-        stockData.setAmountChanges(amountChanges);
+        StockReturnData stockData = StockReturnData.builder()
+            .ticker(ticker)
+            .priceReturn(priceReturn)
+            .totalReturn(totalReturn)
+            .cagr(cagr)
+            .volatility(0.0)
+            .amountChanges(amountChanges)
+            .build();
 
         // Then
         assertEquals(ticker, stockData.getTicker());
@@ -45,7 +52,7 @@ class StockReturnDataAmountTest {
     @Test
     void shouldHaveNullAmountChangesByDefault() {
         // Given & When
-        StockReturnData stockData = new StockReturnData();
+        StockReturnData stockData = StockReturnData.builder().build();
 
         // Then
         assertNull(stockData.getAmountChanges());
@@ -54,11 +61,11 @@ class StockReturnDataAmountTest {
     @Test
     void shouldSetAndGetMaxDrawdown() {
         // Given
-        StockReturnData stockData = new StockReturnData();
         double maxDrawdown = -0.25;
+        StockReturnData stockData = StockReturnData.builder().maxDrawdown(maxDrawdown).build();
 
         // When
-        stockData.setMaxDrawdown(maxDrawdown);
+        
 
         // Then
         assertEquals(maxDrawdown, stockData.getMaxDrawdown());
@@ -75,8 +82,14 @@ class StockReturnDataAmountTest {
         double maxDrawdown = -0.3;
 
         // When
-        StockReturnData stockData = new StockReturnData(ticker, priceReturn, totalReturn, cagr, volatility);
-        stockData.setMaxDrawdown(maxDrawdown);
+        StockReturnData stockData = StockReturnData.builder()
+            .ticker(ticker)
+            .priceReturn(priceReturn)
+            .totalReturn(totalReturn)
+            .cagr(cagr)
+            .volatility(volatility)
+            .maxDrawdown(maxDrawdown)
+            .build();
 
         // Then
         assertEquals(maxDrawdown, stockData.getMaxDrawdown());

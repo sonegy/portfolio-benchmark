@@ -62,9 +62,10 @@ public class PortfolioReturnService {
 
         // Calculate returns for each stock
         List<StockReturnData> stockReturns = calculateStockReturns(request, stockData);
-        for (StockReturnData stockReturnData : stockReturns) {
-            log.debug("analyzePortfolio stockReturnData {}", JsonLoggingUtils.toJsonPretty(stockReturnData));
-        }
+        // for (StockReturnData stockReturnData : stockReturns) {
+        // log.debug("analyzePortfolio stockReturnData {}",
+        // JsonLoggingUtils.toJsonPretty(stockReturnData));
+        // }
 
         // Calculate and set portfolio-level metrics
         return calculatePortfolioReturnData(stockReturns, request.getWeights());
@@ -140,20 +141,23 @@ public class PortfolioReturnService {
         return stockReturns;
     }
 
-    private StockReturnData calculateStockReturn(String ticker, ChartResponse chartResponse, boolean includeDividends,
-            double initialAmount, double weight) {
-        // Extract prices and timestamps from chart response
-        List<Double> prices = extractPrices(chartResponse);
-        List<Long> timestamps = extractTimestamps(chartResponse);
+    private StockReturnData calculateStockReturn(String ticker, List<Double> prices, List<Long> timestamps,
+            List<Dividend> dividends, double initialAmount, double weight) {
+        boolean includeDividends = dividends != null && !dividends.isEmpty();
 
         if (prices.isEmpty()) {
             log.error("{} prices is Empty", ticker);
-            return new StockReturnData(ticker, 0.0, 0.0, 0.0, 0.0);
+            return StockReturnData.builder()
+                    .ticker(ticker)
+                    .priceReturn(0.0)
+                    .totalReturn(0.0)
+                    .cagr(0.0)
+                    .volatility(0.0)
+                    .build();
         }
 
         // Calculate returns
         ReturnRate priceReturn = returnCalculator.calculatePriceReturn(prices);
-        List<Dividend> dividends = extractDividends(chartResponse);
         ReturnRate totalReturn = includeDividends
                 ? returnCalculator.calculateTotalReturn(prices, timestamps, dividends)
                 : priceReturn;
@@ -166,49 +170,66 @@ public class PortfolioReturnService {
         // prices.get(prices.size() - 1);
         log.debug("calculateStockReturn.startPrice:{} endPrice:{}", startPrice, endPrice);
 
-        double years = calculateYearsBetweenPrices(chartResponse);
+        double years = calculateYearsBetweenPrices(timestamps);
         double cagr = years > 0 ? returnCalculator.calculateCAGR(startPrice, endPrice, years).rate() : 0.0;
-        List<ReturnRate> periodicReturnRate = returnCalculator.calculatePeriodicReturnRates(prices, timestamps, dividends);
+        List<ReturnRate> periodicReturnRate = returnCalculator.calculatePeriodicReturnRates(prices, timestamps,
+                dividends);
         double volatility = returnCalculator.calculateVolatility(periodicReturnRate);
         log.debug("calculateStockReturn.ticker:{} volatility:{}", ticker, volatility);
 
         // 누적 수익율 배당금 포함.
         List<ReturnRate> cumulativeReturns = returnCalculator.calculateCumulativeReturns(prices, timestamps, dividends);
         // 누적 수익율 배당금 미포함.
-        List<ReturnRate> cumulativePriceReturns = returnCalculator.calculateCumulativeReturns(prices, timestamps, emptyList());
+        List<ReturnRate> cumulativePriceReturns = returnCalculator.calculateCumulativeReturns(prices, timestamps,
+                emptyList());
 
         // 최대낙폭
         List<Double> maxDrawdowns = returnCalculator.calculateMaxDrawdowns(prices);
-        log.debug("calculateStockReturn.ticker:{} maxDrawdowns:{}", ticker, maxDrawdowns);
+        // log.debug("calculateStockReturn.ticker:{} maxDrawdowns:{}", ticker,
+        // maxDrawdowns);
 
-        StockReturnData stockReturnData = new StockReturnData(ticker, priceReturn.rate(), totalReturn.rate(), cagr, volatility);
-        stockReturnData.setCumulativeReturns(cumulativeReturns.stream().map(ReturnRate::rate).toList());
-        stockReturnData.setCumulativePriceReturns(cumulativePriceReturns.stream().map(ReturnRate::rate).toList());
-        stockReturnData.setPrices(prices);
-        stockReturnData.setTimestamps(timestamps);
-        stockReturnData.setDates(extractDates(chartResponse));
-        stockReturnData.setIntervalReturns(periodicReturnRate.stream().map(ReturnRate::rate).toList());
-        stockReturnData.setMaxDrawdowns(maxDrawdowns);
-        stockReturnData.setMaxDrawdown(returnCalculator.calculateMaxValue(maxDrawdowns));
-
-        // Calculate amount changes if initial amount is provided
-        if (initialAmount > 0) {
-            List<Amount> amountChanges = returnCalculator.calculateCumulativeAmounts(prices, timestamps, dividends,
-                    initialAmount, weight);
-            stockReturnData.setAmountChanges(amountChanges.stream().map(Amount::amount).toList());
-        }
-
-        return stockReturnData;
+        return StockReturnData.builder()
+                .ticker(ticker)
+                .priceReturn(priceReturn.rate())
+                .totalReturn(totalReturn.rate())
+                .cagr(cagr)
+                .volatility(volatility)
+                .cumulativeReturns(cumulativeReturns.stream().map(ReturnRate::rate).toList())
+                .cumulativePriceReturns(cumulativePriceReturns.stream().map(ReturnRate::rate).toList())
+                .prices(requireNonNullElse(prices, emptyList()))
+                .timestamps(requireNonNullElse(timestamps, emptyList()))
+                .dividends(dividends)
+                .initialAmount(initialAmount * weight)
+                .dates(extractDates(timestamps))
+                .periodicReturnRates(periodicReturnRate.stream().map(ReturnRate::rate).toList())
+                .maxDrawdowns(maxDrawdowns)
+                .maxDrawdown(returnCalculator.calculateMaxValue(maxDrawdowns))
+                // Calculate amount changes if initial amount is provided
+                .amountChanges(initialAmount > 0
+                        ? returnCalculator.calculateCumulativeAmounts(
+                                prices, timestamps, dividends, initialAmount, weight)
+                                .stream().map(Amount::amount).toList()
+                        : Collections.emptyList())
+                .sharpeRatio(returnCalculator.calculateSharpeRatio(periodicReturnRate))
+                .build();
     }
 
-    private double calculateYearsBetweenPrices(ChartResponse chartResponse) {
-        ChartResponse.Result result = getFirstResult(chartResponse);
-        if (result == null || result.getTimestamp() == null || result.getTimestamp().size() < 2) {
+    private StockReturnData calculateStockReturn(String ticker, ChartResponse chartResponse, boolean includeDividends,
+            double initialAmount, double weight) {
+        // Extract prices and timestamps from chart response
+        List<Double> prices = extractPrices(chartResponse);
+        List<Long> timestamps = extractTimestamps(chartResponse);
+        List<Dividend> dividends = includeDividends ? extractDividends(chartResponse) : Collections.emptyList();
+        return calculateStockReturn(ticker, prices, timestamps, dividends, initialAmount, weight);
+    }
+
+    private double calculateYearsBetweenPrices(List<Long> timestamps) {
+        if (timestamps == null || timestamps.size() < 2) {
             return 1; // Default to 1 year if timestamps are not available
         }
 
-        long startTimestamp = result.getTimestamp().get(0);
-        long endTimestamp = result.getTimestamp().get(result.getTimestamp().size() - 1);
+        long startTimestamp = timestamps.get(0);
+        long endTimestamp = timestamps.get(timestamps.size() - 1);
 
         // Convert seconds to years (approximate)
         long secondsInYear = 365L * 24L * 60L * 60L;
@@ -263,18 +284,73 @@ public class PortfolioReturnService {
         return chartResponse.getChart().getResult().get(0);
     }
 
-    List<LocalDate> extractDates(ChartResponse chartResponse) {
-        ChartResponse.Result result = getFirstResult(chartResponse);
-        if (result == null) {
+    List<LocalDate> extractDates(List<Long> timestamps) {
+        if (timestamps == null || timestamps.isEmpty()) {
             return new ArrayList<>();
         }
 
-        if (result.getTimestamp() == null ||
-                result.getTimestamp().isEmpty()) {
-            return new ArrayList<>();
+        return timestamps.stream().map(DateUtils::toLocalDate).toList();
+    }
+
+    StockReturnData calculatePortfolioStockReturn(List<StockReturnData> stockReturns, List<Double> weights) {
+        if (stockReturns == null || stockReturns.isEmpty()) {
+            throw new UnsupportedOperationException();
+        }
+        if (weights == null || weights.isEmpty()) {
+            throw new IllegalArgumentException("weights must not be null or empty");
+        }
+        if (stockReturns.size() != weights.size()) {
+            throw new IllegalArgumentException("stockReturns and weights must have the same size");
         }
 
-        return result.getTimestamp().stream().map(DateUtils::toLocalDate).toList();
+        List<Double> prices = new ArrayList<>();
+        List<Long> timestamps = stockReturns.get(0).getTimestamps();
+
+        // 각 시점별로 모든 주식의 가격×비율을 합산하여 포트폴리오 가격을 계산
+        if (timestamps != null && !timestamps.isEmpty()) {
+            int n = timestamps.size();
+            for (int i = 0; i < n; i++) {
+                double portfolioPrice = 0.0;
+                for (int j = 0; j < stockReturns.size(); j++) {
+                    final double firstPrice = stockReturns.get(j).getPrices().get(0);
+                    double price = stockReturns.get(j).getPrices().get(i);
+                    double weight = weights.get(j);
+                    portfolioPrice += (price / firstPrice) * weight;
+                }
+                prices.add(portfolioPrice);
+            }
+        }
+
+        List<Dividend> allDividends = new ArrayList<>();
+        for (int i = 0; i < stockReturns.size(); i++) {
+            final double firstPrice = stockReturns.get(i).getPrices().get(0);
+            List<Dividend> dividends = stockReturns.get(i).getDividends();
+            double weight = weights.get(i);
+
+            allDividends.addAll(
+                    dividends.stream().map(dividend -> {
+                        Dividend div = new Dividend();
+                        div.setAmount((dividend.getAmount() / firstPrice) * weight);
+                        div.setDate(dividend.getDate());
+                        return div;
+                    }).toList());
+
+        }
+
+        // 각 ticker의 초기가격을 모두 더하면 총 초기가격
+        for (int i = 0; i < stockReturns.size(); i++) {
+            double initialAmount = stockReturns.get(i).getInitialAmount();
+            log.debug("calculatePortfolioStockReturn.initialAmount:{}", initialAmount);
+        }
+        double initialAmount = stockReturns.stream().mapToDouble(v -> v.getInitialAmount()).sum();
+        log.debug("calculatePortfolioStockReturn.initialAmount:{}", initialAmount);
+        ;
+        // prices가 비어 있으면 명확한 예외 발생
+        if (prices == null || prices.isEmpty()) {
+            throw new IllegalArgumentException("Portfolio prices cannot be empty");
+        }
+        // 모든 ticker의 처의 가격
+        return calculateStockReturn("Portfolio", prices, timestamps, allDividends, initialAmount, 1.0);
     }
 
     private PortfolioReturnData calculatePortfolioReturnData(List<StockReturnData> stockReturns,
@@ -287,10 +363,11 @@ public class PortfolioReturnService {
         List<Double> prices = returnCalculator.calculatePrices(priceReturns, 1.0);
         List<Double> maxDrawdowns = returnCalculator.calculateMaxDrawdowns(prices);
         Double maxDrawdown = returnCalculator.calculateMaxValue(maxDrawdowns);
-        for (int i = 0; i < maxDrawdowns.size(); i++) {
-            log.debug("calculatePortfolioReturnData.priceReturns:{} maxDrawdowns:{}", priceReturns.get(i),
-                    maxDrawdowns.get(i));
-        }
+        // for (int i = 0; i < maxDrawdowns.size(); i++) {
+        // log.debug("calculatePortfolioReturnData.priceReturns:{} maxDrawdowns:{}",
+        // priceReturns.get(i),
+        // maxDrawdowns.get(i));
+        // }
         log.debug("calculatePortfolioReturnData.maxDrawdown:{}", maxDrawdown);
 
         PortfolioReturnData portfolioData = new PortfolioReturnData(stockReturns);
@@ -304,18 +381,7 @@ public class PortfolioReturnService {
 
         portfolioData.setStartDate(startDate);
         portfolioData.setEndDate(endDate);
-        portfolioData.setDates(dates);
-        portfolioData.setPortfolioPriceReturn(portfolioAnalyzer.calculatePortfolioPriceReturn(stockReturns, weights));
-        portfolioData.setPortfolioTotalReturn(portfolioAnalyzer.calculatePortfolioTotalReturn(stockReturns, weights));
-        double cagr = portfolioAnalyzer.calculatePortfolioCAGR(stockReturns, weights);
-        portfolioData.setPortfolioCAGR(cagr);
-        double volatility = portfolioAnalyzer.calculateVolatility(stockReturns, weights);
-        portfolioData.setVolatility(volatility);
-        portfolioData.setMaxDrawdowns(maxDrawdowns);
-        portfolioData.setMaxDrawdown(maxDrawdown);
-        portfolioData.setSharpeRatio(portfolioAnalyzer.calculateSharpeRatio(stockReturns, weights));
-        portfolioData.setPortfolioCumulativeReturns(
-                portfolioAnalyzer.calculatePortfolioCumulativeReturns(stockReturns, weights));
+        portfolioData.setPortfolioStockReturn(calculatePortfolioStockReturn(stockReturns, weights));
         return portfolioData;
     }
 }

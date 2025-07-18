@@ -7,14 +7,16 @@ import org.mockito.MockitoAnnotations;
 
 import lombok.extern.slf4j.Slf4j;
 import portfolio.api.ChartResponse;
+import portfolio.api.ChartResponse.Dividend;
 import portfolio.model.CAGR;
 import portfolio.model.PortfolioRequest;
 import portfolio.model.PortfolioReturnData;
 import portfolio.model.ReturnRate;
 import portfolio.model.StockReturnData;
 
-import java.text.SimpleDateFormat;
 import java.time.LocalDate;
+import java.util.List;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
@@ -98,6 +100,7 @@ class PortfolioReturnServiceTest {
         // Given
         PortfolioRequest request = new PortfolioRequest(
                 Arrays.asList("AAPL", "GOOGL"),
+                Arrays.asList(0.5, 0.5),
                 LocalDate.of(2023, 1, 1),
                 LocalDate.of(2023, 12, 31),
                 true);
@@ -117,7 +120,7 @@ class PortfolioReturnServiceTest {
                 .thenReturn(CompletableFuture.completedFuture(mockDividendData));
         when(returnCalculator.calculatePriceReturn(anyList())).thenReturn(new ReturnRate(100.0, 110.0));
         when(returnCalculator.calculateTotalReturn(anyList(), anyList(), anyList())).thenReturn(new ReturnRate(100.0, 112.0));
-        when(returnCalculator.calculateCAGR(anyDouble(), anyDouble(), anyInt())).thenReturn(new CAGR(100.0, 112.0, 1));
+        when(returnCalculator.calculateCAGR(anyDouble(), anyDouble(), anyDouble())).thenReturn(new CAGR(100.0, 112.0, 1));
 
         // When
         PortfolioReturnData result = portfolioReturnService.analyzePortfolio(request);
@@ -133,6 +136,7 @@ class PortfolioReturnServiceTest {
         // Given
         PortfolioRequest request = new PortfolioRequest(
                 Arrays.asList("AAPL"),
+                Arrays.asList(1.0),
                 LocalDate.of(2023, 1, 1),
                 LocalDate.of(2023, 12, 31),
                 false);
@@ -174,6 +178,8 @@ class PortfolioReturnServiceTest {
         quote.setClose(Arrays.asList(100.0, 110.0, 115.0));
         indicators.setQuote(Arrays.asList(quote));
         result.setIndicators(indicators);
+        // 타임스탬프 추가 (예: 2023-01-01, 2023-02-01, 2023-03-01)
+        result.setTimestamp(Arrays.asList(1672531200L, 1675209600L, 1677628800L));
         chart.setResult(Arrays.asList(result));
         response.setChart(chart);
 
@@ -186,10 +192,25 @@ class PortfolioReturnServiceTest {
         ChartResponse.Result result = new ChartResponse.Result();
         ChartResponse.Events events = new ChartResponse.Events();
 
-        events.setDividends(new HashMap<>());
+        
+
+        HashMap<String, Dividend> dividends = new HashMap<>();
+        Dividend dividend = new Dividend();
+        dividend.setAmount(1.0);
+        dividend.setDate(1672531200L);
+        dividends.put("1672531200",dividend);
+        events.setDividends(dividends);
 
         // Mock price data
         result.setEvents(events);
+
+        ChartResponse.Indicators indicators = new ChartResponse.Indicators();
+        ChartResponse.Quote quote = new ChartResponse.Quote();
+        quote.setClose(Arrays.asList(100.0, 110.0, 115.0));
+        indicators.setQuote(Arrays.asList(quote));
+        result.setIndicators(indicators);
+        // 타임스탬프 추가 (예: 2023-01-01, 2023-02-01, 2023-03-01)
+        result.setTimestamp(Arrays.asList(1672531200L, 1675209600L, 1677628800L));
         chart.setResult(Arrays.asList(result));
         response.setChart(chart);
 
@@ -197,17 +218,47 @@ class PortfolioReturnServiceTest {
     }
 
     @Test
+    void shouldCalculatePortfolioStockReturnWithTwoStocksAndEqualWeights() {
+        // Given: 두 개의 StockReturnData와 동일한 길이의 가격 시계열, 동일한 타임스탬프
+        List<Long> timestamps = Arrays.asList(1L, 2L, 3L);
+        StockReturnData stock1 = StockReturnData.builder()
+                .ticker("AAA")
+                .prices(Arrays.asList(100.0, 110.0, 120.0))
+                .timestamps(timestamps)
+                .initialAmount(1000.0)
+                .dividends(new ArrayList<>())
+                .build();
+        StockReturnData stock2 = StockReturnData.builder()
+                .ticker("BBB")
+                .prices(Arrays.asList(200.0, 210.0, 220.0))
+                .timestamps(timestamps)
+                .initialAmount(1000.0)
+                .dividends(new ArrayList<>())
+                .build();
+        List<StockReturnData> stockReturns = Arrays.asList(stock1, stock2);
+        List<Double> weights = Arrays.asList(0.5, 0.5);
+
+        // When: calculatePortfolioStockReturn 호출
+
+        PortfolioReturnService x = new PortfolioReturnService(portfolioDataService, new ReturnCalculator(), portfolioAnalyzer, periodManager);
+        StockReturnData result = x.calculatePortfolioStockReturn(stockReturns, weights);
+
+        // Then: 결과가 null이 아니고, 가격 시계열 길이가 동일해야 함
+        assertNotNull(result);
+        System.out.println("result=" + result);
+        System.out.println("result.getTimestamps()=" + result.getTimestamps());
+        assertEquals(timestamps, result.getTimestamps());
+        assertEquals(3, result.getPrices().size());
+        // 실제 수익률 등은 구현에 따라 달라질 수 있으므로, 여기서는 존재 여부만 확인
+    }
+
+    @Test
     void shouldExtractDatesFromChartResponse() {
         // Given
-        ChartResponse response = new ChartResponse();
-        ChartResponse.Chart chart = new ChartResponse.Chart();
-        ChartResponse.Result result = new ChartResponse.Result();
-        result.setTimestamp(Arrays.asList(1593576000L, 1596254400L, 1598932800L, 1601524800L));
-        chart.setResult(Arrays.asList(result));
-        response.setChart(chart);
+        var timestamps = Arrays.asList(1593576000L, 1596254400L, 1598932800L, 1601524800L);
 
         // When
-        var dates = portfolioReturnService.extractDates(response);
+        var dates = portfolioReturnService.extractDates(timestamps);
 
         // Then
         assertEquals(4, dates.size());
@@ -224,7 +275,10 @@ class PortfolioReturnServiceTest {
         response.getChart().getResult().get(0).setTimestamp(null);
 
         // When
-        var dates = portfolioReturnService.extractDates(response);
+        var dates = portfolioReturnService.extractDates(
+            response.getChart() != null && response.getChart().getResult() != null && !response.getChart().getResult().isEmpty() ?
+                response.getChart().getResult().get(0).getTimestamp() : null
+        );
 
         // Then
         assertTrue(dates.isEmpty());
@@ -236,7 +290,10 @@ class PortfolioReturnServiceTest {
         ChartResponse response = new ChartResponse();
 
         // When
-        var dates = portfolioReturnService.extractDates(response);
+        var dates = portfolioReturnService.extractDates(
+            response.getChart() != null && response.getChart().getResult() != null && !response.getChart().getResult().isEmpty() ?
+                response.getChart().getResult().get(0).getTimestamp() : null
+        );
 
         // Then
         assertTrue(dates.isEmpty());

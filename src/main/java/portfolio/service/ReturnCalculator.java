@@ -197,7 +197,7 @@ public class ReturnCalculator {
             Double prev = pList.get(i - 1).amount();
             // double r = (current - prev) / prev;
             ReturnRate returnRate = new ReturnRate(prev, current);
-            log.debug("calculateReturn {} current {} prev {} r {}", i, current, prev, returnRate);
+//            log.debug("calculateReturn {} current {} prev {} r {}", i, current, prev, returnRate);
             returns.add(returnRate);
         }
         return returns;
@@ -221,7 +221,7 @@ public class ReturnCalculator {
                 peak = price;
             }
             double drawdown = (peak == 0.0) ? 0.0 : (peak - price) / peak;
-            log.debug("calculateMaxDrawdowns price {} peak {} drawdown {}", price, peak, drawdown);
+            // log.debug("calculateMaxDrawdowns price {} peak {} drawdown {}", price, peak, drawdown);
             drawdowns.add(drawdown);
         }
         return drawdowns;
@@ -300,7 +300,7 @@ public class ReturnCalculator {
             if (value > max) {
                 max = value;
             }
-            log.debug("calculateMaxValue max {} value {}", max, value);
+//            log.debug("calculateMaxValue max {} value {}", max, value);
         }
         return max;
     }

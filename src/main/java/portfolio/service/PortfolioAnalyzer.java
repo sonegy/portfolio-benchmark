@@ -49,7 +49,7 @@ public class PortfolioAnalyzer {
      * @return 포트폴리오 변동성(표준편차)
      */
     public double calculateVolatility(List<StockReturnData> stockReturns, List<Double> weights) {
-        List<List<Double>> returnsInStocks = stockReturns.stream().map(stock -> stock.getIntervalReturns()).toList();
+        List<List<Double>> returnsInStocks = stockReturns.stream().map(stock -> stock.getPeriodicReturnRates()).toList();
         if (returnsInStocks.isEmpty() || weights.isEmpty()) {
             throw new IllegalArgumentException("returnsInStocks, weights must not be empty");
         }
@@ -230,7 +230,7 @@ public class PortfolioAnalyzer {
     }
 
     public double calculateSharpeRatio(List<StockReturnData> stockReturns, List<Double> weights) {
-        List<List<Double>> returnsInStocks = stockReturns.stream().map(stock -> stock.getIntervalReturns()).toList();
+        List<List<Double>> returnsInStocks = stockReturns.stream().map(stock -> stock.getPeriodicReturnRates()).toList();
         List<Double> finalWeights = getFinalWeights(stockReturns.size(), weights);
 
         int n = returnsInStocks.size();

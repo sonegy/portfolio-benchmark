@@ -21,7 +21,7 @@ class ReportGeneratorTest {
     @BeforeEach
     void setUp() {
         reportGenerator = new ReportGenerator();
-        
+
         // 샘플 요청 데이터 생성
         sampleRequest = new PortfolioRequest();
         sampleRequest.setTickers(List.of("AAPL", "MSFT"));
@@ -30,30 +30,43 @@ class ReportGeneratorTest {
         sampleRequest.setIncludeDividends(true);
 
         // 샘플 포트폴리오 데이터 생성
-        StockReturnData appleData = new StockReturnData("AAPL", 0.15, 0.18, 0.12, 0.0);
-        appleData.setCumulativeReturns(List.of(1.0, 1.05, 1.10, 1.15));
-        appleData.setDates(List.of(
-            LocalDate.of(2023, 1, 1),
-            LocalDate.of(2023, 4, 1),
-            LocalDate.of(2023, 7, 1),
-            LocalDate.of(2023, 10, 1)
-        ));
+        StockReturnData appleData = StockReturnData.builder()
+                .ticker("AAPL")
+                .priceReturn(0.15)
+                .totalReturn(0.18)
+                .cagr(0.12)
+                .volatility(0.0)
+                .cumulativeReturns(List.of(1.0, 1.05, 1.10, 1.15))
+                .dates(List.of(
+                        LocalDate.of(2023, 1, 1),
+                        LocalDate.of(2023, 4, 1),
+                        LocalDate.of(2023, 7, 1),
+                        LocalDate.of(2023, 10, 1)))
+                .build();
 
-        StockReturnData microsoftData = new StockReturnData("MSFT", 0.12, 0.14, 0.10, 0.0);
-        microsoftData.setCumulativeReturns(List.of(1.0, 1.03, 1.08, 1.12));
-        microsoftData.setDates(List.of(
-            LocalDate.of(2023, 1, 1),
-            LocalDate.of(2023, 4, 1),
-            LocalDate.of(2023, 7, 1),
-            LocalDate.of(2023, 10, 1)
-        ));
+        StockReturnData microsoftData = StockReturnData.builder()
+                .ticker("MSFT")
+                .priceReturn(0.12)
+                .totalReturn(0.14)
+                .cagr(0.10)
+                .volatility(0.0)
+                .cumulativeReturns(List.of(1.0, 1.03, 1.08, 1.12))
+                .dates(List.of(
+                        LocalDate.of(2023, 1, 1),
+                        LocalDate.of(2023, 4, 1),
+                        LocalDate.of(2023, 7, 1),
+                        LocalDate.of(2023, 10, 1)))
+                .build();
 
         samplePortfolioData = new PortfolioReturnData(List.of(appleData, microsoftData));
-        samplePortfolioData.setPortfolioPriceReturn(0.135);
-        samplePortfolioData.setPortfolioTotalReturn(0.16);
-        samplePortfolioData.setPortfolioCAGR(0.11);
-        samplePortfolioData.setVolatility(0.08);
-        samplePortfolioData.setSharpeRatio(1.2);
+        samplePortfolioData.setPortfolioStockReturn(StockReturnData.builder()
+                .ticker("Portfolio")
+                .priceReturn(0.135)
+                .totalReturn(0.16)
+                .cagr(0.11)
+                .volatility(0.08)
+                .sharpeRatio(1.2)
+                .build());
     }
 
     @Test
@@ -98,12 +111,12 @@ class ReportGeneratorTest {
         // Then
         assertNotNull(analyses);
         assertEquals(2, analyses.size());
-        
+
         AnalysisReport.StockAnalysis appleAnalysis = analyses.stream()
-            .filter(a -> "AAPL".equals(a.getTicker()))
-            .findFirst()
-            .orElseThrow();
-        
+                .filter(a -> "AAPL".equals(a.getTicker()))
+                .findFirst()
+                .orElseThrow();
+
         assertEquals("AAPL", appleAnalysis.getTicker());
         assertEquals(0.15, appleAnalysis.getPriceReturn(), 0.001);
         assertEquals(0.18, appleAnalysis.getTotalReturn(), 0.001);

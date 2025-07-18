@@ -94,18 +94,6 @@ public class PortfolioController {
         return ResponseEntity.ok(chartData);
     }
 
-    // /**
-    //  * 누적 수익률 차트 데이터 생성
-    //  */
-    // @PostMapping("/chart/cumulative")
-    // public ResponseEntity<ChartData> generateCumulativeChart(@RequestBody PortfolioRequest request) {
-    //     adjustToPreviousMonthLastDay(request);
-    //     validateRequest(request);
-    //     PortfolioReturnData portfolioData = portfolioReturnService.analyzePortfolio(request);
-    //     ChartData chartData = chartGenerator.generateCumulativeReturnChart(portfolioData);
-    //     return ResponseEntity.ok(chartData);
-    // }
-
     /**
      * 금액 변화 차트 데이터 생성
      */

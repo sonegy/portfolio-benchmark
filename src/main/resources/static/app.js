@@ -24,7 +24,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const today = new Date();
     const oneYearAgo = new Date(today.getFullYear() - 1, today.getMonth(), today.getDate());
 
-//    document.getElementById('startDate').value = oneYearAgo.toISOString().split('T')[0];
+    //    document.getElementById('startDate').value = oneYearAgo.toISOString().split('T')[0];
     //document.getElementById('endDate').value = today.toISOString().split('T')[0];
 
     // 초기 가중치 컨테이너 업데이트
@@ -97,8 +97,11 @@ async function createChartsAll(analysisResult) {
         document.getElementById('amountChartSection').style.display = 'none';
     }
     // 최대 낙폭(MDD) 차트
-    if (analysisResult.portfolioData && analysisResult.portfolioData.maxDrawdowns && analysisResult.portfolioData.maxDrawdowns.length > 0) {
-        createMaxDrawdownChart(analysisResult.portfolioData);
+    if (analysisResult.portfolioData
+        && analysisResult.portfolioData.portfolioStockReturn
+        && analysisResult.portfolioData.portfolioStockReturn.maxDrawdowns 
+        && analysisResult.portfolioData.portfolioStockReturn.maxDrawdowns.length > 0) {
+        createMaxDrawdownChart(analysisResult.portfolioData.portfolioStockReturn);
         document.getElementById('maxDrawdownChartSection').style.display = 'block';
     } else {
         document.getElementById('maxDrawdownChartSection').style.display = 'none';
@@ -172,36 +175,37 @@ async function analyzePortfolioAll(formData) {
 
 // 포트폴리오 요약 표시
 function displayPortfolioSummary(portfolioData) {
+    let portfolio = portfolioData.portfolioStockReturn;
     const summaryContainer = document.getElementById('portfolioSummary');
 
     const metrics = [
         {
             label: '포트폴리오 가격 수익률',
-            value: formatPercentage(portfolioData.portfolioPriceReturn),
-            class: getReturnClass(portfolioData.portfolioPriceReturn)
+            value: formatPercentage(portfolio.priceReturn),
+            class: getReturnClass(portfolio.priceReturn)
         },
         {
             label: '포트폴리오 총 수익률',
-            value: formatPercentage(portfolioData.portfolioTotalReturn),
-            class: getReturnClass(portfolioData.portfolioTotalReturn)
+            value: formatPercentage(portfolio.totalReturn),
+            class: getReturnClass(portfolio.totalReturn)
         },
         {
             label: '연평균 성장률 (CAGR)',
-            value: formatPercentage(portfolioData.portfolioCAGR),
-            class: getReturnClass(portfolioData.portfolioCAGR)
+            value: formatPercentage(portfolio.cagr),
+            class: getReturnClass(portfolio.cagr)
         },
         {
             label: '변동성',
-            value: formatPercentage(portfolioData.volatility),
+            value: formatPercentage(portfolio.volatility),
             class: 'neutral-return'
         }
     ];
 
     // 자연어 요약 문구 생성
     const summaryText = `이 포트폴리오는 ${portfolioData.startDate}부터 ${portfolioData.endDate}까지의 기간 동안 ` +
-        `총수익률은 ${formatPercentage(portfolioData.portfolioTotalReturn)}, ` +
-        `연평균 성장률은 ${formatPercentage(portfolioData.portfolioCAGR)}, ` +
-        `변동성은 ${formatPercentage(portfolioData.volatility)}입니다.`;
+        `총수익률은 ${formatPercentage(portfolio.totalReturn)}, ` +
+        `연평균 성장률은 ${formatPercentage(portfolio.cagr)}, ` +
+        `변동성은 ${formatPercentage(portfolio.volatility)}입니다.`;
 
     summaryContainer.innerHTML = `
         <div class="portfolio-summary-text" style="font-size:1.1em; margin-bottom: 16px; font-weight:500; color:#333;">
@@ -218,7 +222,7 @@ function displayPortfolioSummary(portfolioData) {
 }
 
 // 최대 낙폭(MDD) 차트 생성
-function createMaxDrawdownChart(portfolioData) {
+function createMaxDrawdownChart(stockReturnData) {
     const ctx = document.getElementById('maxDrawdownChart').getContext('2d');
     if (window.maxDrawdownChartInstance) {
         window.maxDrawdownChartInstance.destroy();
@@ -226,10 +230,10 @@ function createMaxDrawdownChart(portfolioData) {
     window.maxDrawdownChartInstance = new Chart(ctx, {
         type: 'line',
         data: {
-            labels: (portfolioData.dates || []).map(formatDate),
+            labels: (stockReturnData.dates || []).map(formatDate),
             datasets: [{
                 label: '최대 낙폭(MDD)',
-                data: portfolioData.maxDrawdowns || [],
+                data: stockReturnData.maxDrawdowns || [],
                 borderColor: 'rgba(220,53,69,1)',
                 backgroundColor: 'rgba(220,53,69,0.1)',
                 fill: true,
@@ -439,112 +443,17 @@ function createComparisonChart(chartData) {
     });
 }
 
-// 기본 차트 생성 (API 실패 시)
-function createDefaultCharts(portfolioData) {
-    // 시계열 차트
-    const timeSeriesCtx = document.getElementById('timeSeriesChart').getContext('2d');
-    if (timeSeriesChart) timeSeriesChart.destroy();
-
-    const datasets = portfolioData.stockReturns.map((stock, index) => ({
-        label: stock.ticker,
-        data: stock.cumulativeReturns || [],
-        borderColor: getChartColor(index),
-        backgroundColor: getChartColor(index, 0.1),
-        borderWidth: ticker === 'Portfolio' ? 3 : 1.5,
-        fill: false,
-        tension: 0.2,
-        pointRadius: 0.5,
-        pointHoverRadius: 4,
-        pointBackgroundColor: getChartColor(index, 0.3),
-        pointBorderColor: getChartColor(index),
-        pointBorderWidth: 0.5
-    }));
-
-    if (portfolioData.portfolioCumulativeReturns) {
-        datasets.push({
-            label: 'Portfolio',
-            data: portfolioData.portfolioCumulativeReturns,
-            borderColor: getChartColor(datasets.length),
-            backgroundColor: getChartColor(datasets.length, 0.1),
-            borderWidth: 3.5,
-            fill: false,
-            tension: 0.2,
-            pointRadius: 0.5,
-            pointHoverRadius: 4,
-            pointBackgroundColor: getChartColor(datasets.length, 0.3),
-            pointBorderColor: getChartColor(datasets.length),
-            pointBorderWidth: 0.5
-        });
-    }
-
-    timeSeriesChart = new Chart(timeSeriesCtx, {
-        type: 'line',
-        data: {
-            labels: portfolioData.stockReturns[0]?.dates?.map(date => formatDate(date)) || [],
-            datasets: datasets
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                title: {
-                    display: true,
-                    text: '누적 수익률 추이'
-                }
-            }
-        }
-    });
-
-    // 비교 차트
-    const comparisonCtx = document.getElementById('comparisonChart').getContext('2d');
-    if (comparisonChart) comparisonChart.destroy();
-
-    comparisonChart = new Chart(comparisonCtx, {
-        type: 'bar',
-        data: {
-            labels: portfolioData.stockReturns.map(stock => stock.ticker),
-            datasets: [
-                {
-                    label: '가격 수익률',
-                    data: portfolioData.stockReturns.map(stock => stock.priceReturn * 100),
-                    backgroundColor: 'rgba(54, 162, 235, 0.8)'
-                },
-                {
-                    label: '총 수익률',
-                    data: portfolioData.stockReturns.map(stock => stock.totalReturn * 100),
-                    backgroundColor: 'rgba(75, 192, 192, 0.8)'
-                }
-            ]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                title: {
-                    display: true,
-                    text: '주식별 수익률 비교'
-                }
-            }
-        }
-    });
-}
-
 // 개별 주식 분석 테이블 생성
 function displayStockAnalysisTable(portfolioData) {
     const tableBody = document.querySelector('#stockAnalysisTable tbody');
 
-    let tableHtml = `
-        <tr class="portfolio-summary-row">
-            <td><strong>Portfolio</strong></td>
-            <td class="${getReturnClass(portfolioData.portfolioPriceReturn)}">${formatPercentage(portfolioData.portfolioPriceReturn)}</td>
-            <td class="${getReturnClass(portfolioData.portfolioTotalReturn)}">${formatPercentage(portfolioData.portfolioTotalReturn)}</td>
-            <td class="${getReturnClass(portfolioData.portfolioCAGR)}">${formatPercentage(portfolioData.portfolioCAGR)}</td>
-            <td>${formatPercentage(portfolioData.volatility || 0)}</td>
-            
-        </tr>
-    `;
+    let stocks = [];
+    stocks.push(portfolioData.portfolioStockReturn);
+    portfolioData.stockReturns.forEach(stock => {
+        stocks.push(stock);
+    });
 
-    tableHtml += portfolioData.stockReturns.map(stock => `
+    let tableHtml = stocks.map(stock => `
         <tr>
             <td><strong>${stock.ticker}</strong></td>
             <td class="${getReturnClass(stock.priceReturn)}">${formatPercentage(stock.priceReturn)}</td>
@@ -561,26 +470,27 @@ function displayStockAnalysisTable(portfolioData) {
 // 리스크 지표 표시
 function displayRiskMetrics(portfolioData) {
     const riskContainer = document.getElementById('riskMetrics');
+    let portfolio = portfolioData.portfolioStockReturn;
 
     const riskMetrics = [
         {
             label: '샤프 비율',
-            value: (portfolioData.sharpeRatio || 0).toFixed(2),
+            value: (portfolio.sharpeRatio || 0).toFixed(2),
             class: 'neutral-return'
         },
         {
             label: '최대 낙폭',
-            value: formatPercentage(portfolioData.maxDrawdown || 0),
+            value: formatPercentage(portfolio.maxDrawdown || 0),
             class: 'negative-return'
         },
         {
             label: 'VaR (95%)',
-            value: formatPercentage(portfolioData.valueAtRisk || 0),
+            value: formatPercentage(portfolio.valueAtRisk || 0),
             class: 'negative-return'
         },
         {
             label: '베타',
-            value: (portfolioData.beta || 1.0).toFixed(2),
+            value: (portfolio.beta || 1.0).toFixed(2),
             class: 'neutral-return'
         }
     ];
@@ -867,87 +777,6 @@ function hasAmountChanges(portfolioData) {
     // 초기 금액이 설정되어 있는지 확인
     const formData = getFormData();
     return formData.initialAmount && formData.initialAmount > 0;
-}
-
-// 금액 변화 차트 생성
-function createAmountChart(portfolioData) {
-    const ctx = document.getElementById('amountChart').getContext('2d');
-
-    // 기존 차트 제거
-    if (amountChart) {
-        amountChart.destroy();
-    }
-
-    const datasets = portfolioData.stockReturns
-        .filter(stock => stock.amountChanges && stock.amountChanges.length > 0)
-        .map((stock, index) => ({
-            label: stock.ticker,
-            data: stock.amountChanges,
-            borderColor: getChartColor(index),
-            backgroundColor: getChartColor(index, 0.1),
-            borderWidth: 2,
-            fill: false,
-            tension: 0.2,
-            pointRadius: 1,
-            pointHoverRadius: 5,
-            pointBackgroundColor: getChartColor(index),
-            pointBorderColor: '#ffffff',
-            pointBorderWidth: 1
-        }));
-
-    amountChart = new Chart(ctx, {
-        type: 'line',
-        data: {
-            labels: portfolioData.stockReturns[0]?.dates?.map(date => formatDate(date)) || [],
-            datasets: datasets
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                title: {
-                    display: true,
-                    text: '포트폴리오 금액 변화'
-                },
-                legend: {
-                    display: true,
-                    position: 'top'
-                },
-                tooltip: {
-                    callbacks: {
-                        label: function (context) {
-                            return `${context.dataset.label}: $${context.parsed.y.toLocaleString()}`;
-                        }
-                    }
-                }
-            },
-            scales: {
-                x: {
-                    display: true,
-                    title: {
-                        display: true,
-                        text: '날짜'
-                    }
-                },
-                y: {
-                    display: true,
-                    title: {
-                        display: true,
-                        text: '금액 ($)'
-                    },
-                    ticks: {
-                        callback: function (value) {
-                            return '$' + value.toLocaleString();
-                        }
-                    }
-                }
-            },
-            interaction: {
-                intersect: false,
-                mode: 'index'
-            }
-        }
-    });
 }
 
 // 금액 변화 차트 생성 (API 데이터 사용)

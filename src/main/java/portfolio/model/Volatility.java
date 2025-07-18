@@ -18,7 +18,7 @@ public class Volatility {
     }
 
     public double standardDeviation() {
-        log.debug("Volatility.standardDeviation.periodicReturnRates {}", JsonLoggingUtils.toJsonPretty(periodicReturnRates));
+        // log.debug("Volatility.standardDeviation.periodicReturnRates {}", JsonLoggingUtils.toJsonPretty(periodicReturnRates));
         double mean = periodicReturnRates.stream().mapToDouble(ReturnRate::rate).average().orElse(0.0);
         double variance = periodicReturnRates.stream().mapToDouble(r -> Math.pow(r.rate() - mean, 2)).average()
                 .orElse(0.0);

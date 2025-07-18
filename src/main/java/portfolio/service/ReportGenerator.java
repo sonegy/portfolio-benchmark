@@ -134,8 +134,8 @@ public class ReportGenerator {
         Map<String, Double> correlationMatrix = calculateCorrelationMatrix(portfolioData);
 
         return new AnalysisReport.RiskMetrics(
-            portfolioData.getVolatility(),
-            portfolioData.getSharpeRatio(),
+            portfolioData.getPortfolioStockReturn().getVolatility(),
+            portfolioData.getPortfolioStockReturn().getSharpeRatio(),
             maxDrawdown,
             correlationMatrix
         );
@@ -143,25 +143,8 @@ public class ReportGenerator {
 
     private double calculateMaxDrawdown(PortfolioReturnData portfolioData) {
         // 간단한 최대 낙폭 계산 (실제로는 더 복잡한 계산이 필요)
-        double maxDrawdown = 0.0;
-        
-        for (StockReturnData stockData : portfolioData.getStockReturns()) {
-            List<Double> returns = stockData.getCumulativeReturns();
-            if (returns != null && returns.size() > 1) {
-                double peak = returns.get(0);
-                for (double value : returns) {
-                    if (value > peak) {
-                        peak = value;
-                    }
-                    double drawdown = (peak - value) / peak;
-                    if (drawdown > maxDrawdown) {
-                        maxDrawdown = drawdown;
-                    }
-                }
-            }
-        }
-        
-        return -maxDrawdown; // 음수로 반환
+        double maxDrawdown = portfolioData.getPortfolioStockReturn().getMaxDrawdown();
+        return -maxDrawdown;
     }
 
     private Map<String, Double> calculateCorrelationMatrix(PortfolioReturnData portfolioData) {
