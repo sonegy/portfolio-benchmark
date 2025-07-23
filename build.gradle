@@ -26,6 +26,12 @@ dependencies {
     // --- Cache ---
     implementation 'com.github.ben-manes.caffeine:caffeine'
 
+    // --- finmath-lib ---
+    implementation 'net.finmath:finmath-lib:6.0.5'
+
+    // --- commons-math3 ---
+    implementation 'org.apache.commons:commons-math3:3.6.1'
+
     // --- Lombok ---
     implementation 'org.projectlombok:lombok:1.18.32'
     annotationProcessor 'org.projectlombok:lombok:1.18.32'

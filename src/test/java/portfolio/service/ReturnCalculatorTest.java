@@ -20,6 +20,18 @@ import portfolio.model.ReturnRate;
 class ReturnCalculatorTest {
 
     @Test
+    void shouldCalculateBeta() {
+        ReturnCalculator calculator = new ReturnCalculator();
+        List<Double> etfReturns = List.of(0.02, 0.01, -0.01, 0.03, 0.015);
+        List<Double> marketReturns = List.of(0.018, 0.012, -0.008, 0.028, 0.017);
+
+        double beta = calculator.calculateBeta(etfReturns, marketReturns);
+
+        assertTrue(beta > 0.5 && beta < 1.5); // 예시: 실제 값은 샘플 데이터에 따라 다름
+    }
+
+
+    @Test
     void shouldCalculateVolatilityWithoutDividends() {
         // Given
         ReturnCalculator calculator = new ReturnCalculator();

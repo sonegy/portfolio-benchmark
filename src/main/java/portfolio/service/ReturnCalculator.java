@@ -13,6 +13,8 @@ import portfolio.model.CAGR;
 import portfolio.model.ReturnRate;
 import portfolio.model.Volatility;
 import portfolio.util.JsonLoggingUtils;
+import org.apache.commons.math3.stat.correlation.Covariance;
+import org.apache.commons.math3.stat.descriptive.moment.Variance;
 
 /**
  * 다양한 유형의 투자 수익률을 계산하는 서비스 클래스입니다.
@@ -24,6 +26,25 @@ import portfolio.util.JsonLoggingUtils;
 @Slf4j
 @Service
 public class ReturnCalculator {
+
+    /**
+     * ETF와 시장 월별 수익률로 베타를 계산합니다.
+     * @param etfReturns ETF 월별 수익률
+     * @param marketReturns 시장 월별 수익률
+     * @return 베타 값
+     */
+    public double calculateBeta(List<Double> etfReturns, List<Double> marketReturns) {
+        if (etfReturns == null || marketReturns == null || etfReturns.size() != marketReturns.size() || etfReturns.size() < 2) {
+            throw new IllegalArgumentException("Input lists must be non-null, same size, and have at least 2 elements");
+        }
+        // finmath-lib 사용
+        double[] x = etfReturns.stream().mapToDouble(Double::doubleValue).toArray();
+        double[] y = marketReturns.stream().mapToDouble(Double::doubleValue).toArray();
+        double cov = new Covariance().covariance(x, y);
+        double var = new Variance().evaluate(y);
+        return cov / var;
+    }
+
 
     /**
      * 가격 리스트가 null이 아니고 최소 두 개 이상의 가격을 포함하는지 검증합니다.
