@@ -88,7 +88,7 @@ class PortfolioControllerTest {
                 LocalDate.of(2023, 1, 1), LocalDate.of(2023, 12, 31), 365,
                 0.18, "AAPL", 0.14, "MSFT");
         AnalysisReport.RiskMetrics riskMetrics = new AnalysisReport.RiskMetrics(
-                0.08, 1.2, -0.05, Map.of());
+                0.08, 1.2, -0.05, Map.of(), 0.0);
         sampleReport = new AnalysisReport(
                 "RPT-12345678", LocalDateTime.now(), sampleRequest, samplePortfolioData,
                 summary, List.of(), riskMetrics);
