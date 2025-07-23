@@ -358,18 +358,6 @@ public class PortfolioReturnService {
         if (stockReturns == null || stockReturns.isEmpty()) {
             throw new UnsupportedOperationException();
         }
-
-        List<Double> priceReturns = portfolioAnalyzer.calculatePortfolioCumulativePriceReturns(stockReturns, weights);
-        List<Double> prices = returnCalculator.calculatePrices(priceReturns, 1.0);
-        List<Double> maxDrawdowns = returnCalculator.calculateMaxDrawdowns(prices);
-        Double maxDrawdown = returnCalculator.calculateMaxValue(maxDrawdowns);
-        // for (int i = 0; i < maxDrawdowns.size(); i++) {
-        // log.debug("calculatePortfolioReturnData.priceReturns:{} maxDrawdowns:{}",
-        // priceReturns.get(i),
-        // maxDrawdowns.get(i));
-        // }
-        log.debug("calculatePortfolioReturnData.maxDrawdown:{}", maxDrawdown);
-
         PortfolioReturnData portfolioData = new PortfolioReturnData(stockReturns);
         List<LocalDate> dates = requireNonNullElse(stockReturns.get(0).getDates(), emptyList());
         LocalDate startDate = null;
