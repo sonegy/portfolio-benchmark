@@ -156,13 +156,15 @@ public class AnalysisReport {
         private final double sharpeRatio;
         private final double maxDrawdown;
         private final Map<String, Double> correlationMatrix;
+        private final double beta;
 
         public RiskMetrics(double portfolioVolatility, double sharpeRatio, 
-                          double maxDrawdown, Map<String, Double> correlationMatrix) {
+                          double maxDrawdown, Map<String, Double> correlationMatrix, double beta) {
             this.portfolioVolatility = portfolioVolatility;
             this.sharpeRatio = sharpeRatio;
             this.maxDrawdown = maxDrawdown;
             this.correlationMatrix = correlationMatrix;
+            this.beta = beta; 
         }
 
         public double getPortfolioVolatility() {
@@ -179,6 +181,10 @@ public class AnalysisReport {
 
         public Map<String, Double> getCorrelationMatrix() {
             return correlationMatrix;
+        }
+
+        public double getBeta() {
+            return beta;
         }
     }
 }

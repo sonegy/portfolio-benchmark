@@ -113,7 +113,9 @@ class PortfolioReturnServiceTest {
         Map<String, ChartResponse> mockDividendData = new HashMap<>();
         mockDividendData.put("AAPL", createMockDividendChartResponse());
         mockDividendData.put("GOOGL", createMockDividendChartResponse());
+        mockDividendData.put("^GSPC", createMockDividendChartResponse());
 
+        mockData.put("^GSPC", createMockChartResponse()); // Add mock for index
         when(portfolioDataService.fetchMultipleStocks(anyList(), anyLong(), anyLong()))
                 .thenReturn(CompletableFuture.completedFuture(mockData));
         when(portfolioDataService.fetchMultipleDividends(anyList(), anyLong(), anyLong()))
@@ -121,6 +123,7 @@ class PortfolioReturnServiceTest {
         when(returnCalculator.calculatePriceReturn(anyList())).thenReturn(new ReturnRate(100.0, 110.0));
         when(returnCalculator.calculateTotalReturn(anyList(), anyList(), anyList())).thenReturn(new ReturnRate(100.0, 112.0));
         when(returnCalculator.calculateCAGR(anyDouble(), anyDouble(), anyDouble())).thenReturn(new CAGR(100.0, 112.0, 1));
+        when(returnCalculator.calculateBeta(anyList(), anyList())).thenReturn(1.2);
 
         // When
         PortfolioReturnData result = portfolioReturnService.analyzePortfolio(request);
@@ -146,11 +149,12 @@ class PortfolioReturnServiceTest {
         Map<String, ChartResponse> stockData = new HashMap<>();
         stockData.put("AAPL", mockResponse);
 
-        when(portfolioDataService.fetchMultipleStocks(anyList(), anyLong(), anyLong()))
-                .thenReturn(CompletableFuture.completedFuture(stockData));
+        stockData.put("^GSPC", createMockChartResponse()); // Add mock for index
+        when(portfolioDataService.fetchMultipleStocks(anyList(), anyLong(), anyLong())).thenReturn(CompletableFuture.completedFuture(stockData));
         when(returnCalculator.calculatePriceReturn(anyList())).thenReturn(new ReturnRate(100, 115));
         when(returnCalculator.calculateTotalReturn(anyList(), anyList(), anyList())).thenReturn(new ReturnRate(100, 115));
         when(returnCalculator.calculateCAGR(anyDouble(), anyDouble(), anyDouble())).thenReturn(new CAGR(100, 115, 1));
+        when(returnCalculator.calculateBeta(anyList(), anyList())).thenReturn(1.2);
 
         // When
         PortfolioReturnData result = portfolioReturnService.analyzePortfolio(request);
@@ -241,7 +245,8 @@ class PortfolioReturnServiceTest {
         // When: calculatePortfolioStockReturn 호출
 
         PortfolioReturnService x = new PortfolioReturnService(portfolioDataService, new ReturnCalculator(), portfolioAnalyzer, periodManager);
-        StockReturnData result = x.calculatePortfolioStockReturn(stockReturns, weights);
+        List<Double> marketReturns = Arrays.asList(0.01, 0.02, -0.01);
+        StockReturnData result = x.calculatePortfolioStockReturn(stockReturns, weights, marketReturns);
 
         // Then: 결과가 null이 아니고, 가격 시계열 길이가 동일해야 함
         assertNotNull(result);

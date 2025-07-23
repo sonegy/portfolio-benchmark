@@ -137,7 +137,8 @@ public class ReportGenerator {
             portfolioData.getPortfolioStockReturn().getVolatility(),
             portfolioData.getPortfolioStockReturn().getSharpeRatio(),
             maxDrawdown,
-            correlationMatrix
+            correlationMatrix,
+            portfolioData.getPortfolioStockReturn().getBeta()
         );
     }
 

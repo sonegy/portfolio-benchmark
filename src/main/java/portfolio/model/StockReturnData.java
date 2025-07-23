@@ -63,10 +63,7 @@ public class StockReturnData {
     private List<Double> maxDrawdowns;
     private double maxDrawdown;
     private double sharpeRatio;
-
-    public String getTicker() {
-        return ticker;
-    }
+    private double beta;
 
     // Lombok이 getter, builder, 생성자 자동 생성
 }

@@ -29,6 +29,7 @@ public class PortfolioReturnService {
     private final ReturnCalculator returnCalculator;
     private final PortfolioAnalyzer portfolioAnalyzer;
     private final PeriodManager periodManager;
+    private static final String INDEX = "^GSPC";
 
     public PortfolioReturnService(
             PortfolioDataService portfolioDataService,
@@ -51,7 +52,15 @@ public class PortfolioReturnService {
         log.debug("analyzePortfolio request:{}", JsonLoggingUtils.toJsonPretty(request));
 
         // Fetch stock data
-        Map<String, ChartResponse> stockData = fetchStockData(request.getTickers(), period1, period2, includeDividends);
+        var tickers = new ArrayList<>(request.getTickers());
+        tickers.add(INDEX); // S&P 500 index
+
+        Map<String, ChartResponse> stockData = fetchStockData(
+            tickers, period1, period2, includeDividends);
+        ChartResponse index = stockData.get(INDEX);
+        stockData.remove(INDEX);
+        List<Double> indexPrices = extractPrices(index);
+
         validateStockDataConsistency(stockData);
         Set<Entry<String, ChartResponse>> entrySet = stockData.entrySet();
         for (Entry<String, ChartResponse> entry : entrySet) {
@@ -61,14 +70,9 @@ public class PortfolioReturnService {
         }
 
         // Calculate returns for each stock
-        List<StockReturnData> stockReturns = calculateStockReturns(request, stockData);
-        // for (StockReturnData stockReturnData : stockReturns) {
-        // log.debug("analyzePortfolio stockReturnData {}",
-        // JsonLoggingUtils.toJsonPretty(stockReturnData));
-        // }
-
+        List<StockReturnData> stockReturns = calculateStockReturns(request, stockData, indexPrices);
         // Calculate and set portfolio-level metrics
-        return calculatePortfolioReturnData(stockReturns, request.getWeights());
+        return calculatePortfolioReturnData(stockReturns, request.getWeights(), indexPrices);
     }
 
     private void validateRequest(PortfolioRequest request) {
@@ -123,7 +127,7 @@ public class PortfolioReturnService {
     }
 
     private List<StockReturnData> calculateStockReturns(PortfolioRequest request,
-            Map<String, ChartResponse> stockData) {
+            Map<String, ChartResponse> stockData, List<Double> indexPrices) {
         List<StockReturnData> stockReturns = new ArrayList<>();
         List<Double> weights = request.getWeights();
 
@@ -134,7 +138,7 @@ public class PortfolioReturnService {
                 double weight = (weights != null && i < weights.size()) ? weights.get(i)
                         : 1.0 / request.getTickers().size();
                 StockReturnData stockReturn = calculateStockReturn(ticker, chartResponse, request.isIncludeDividends(),
-                        request.getInitialAmount(), weight);
+                        request.getInitialAmount(), weight, indexPrices);
                 stockReturns.add(stockReturn);
             }
         }
@@ -142,7 +146,7 @@ public class PortfolioReturnService {
     }
 
     private StockReturnData calculateStockReturn(String ticker, List<Double> prices, List<Long> timestamps,
-            List<Dividend> dividends, double initialAmount, double weight) {
+            List<Dividend> dividends, double initialAmount, double weight, List<Double> indexPrices) {
         boolean includeDividends = dividends != null && !dividends.isEmpty();
 
         if (prices.isEmpty()) {
@@ -188,6 +192,14 @@ public class PortfolioReturnService {
         // log.debug("calculateStockReturn.ticker:{} maxDrawdowns:{}", ticker,
         // maxDrawdowns);
 
+        List<Double> priceReturnsRates = cumulativePriceReturns.stream().map(ReturnRate::rate).toList();
+        List<Double> indexReturnsRates = returnCalculator.calculateCumulativeReturns(indexPrices, timestamps, emptyList())
+                .stream()
+                .map(ReturnRate::rate)
+                .toList();
+
+        double beta = returnCalculator.calculateBeta(priceReturnsRates, indexReturnsRates);
+
         return StockReturnData.builder()
                 .ticker(ticker)
                 .priceReturn(priceReturn.rate())
@@ -211,16 +223,20 @@ public class PortfolioReturnService {
                                 .stream().map(Amount::amount).toList()
                         : Collections.emptyList())
                 .sharpeRatio(returnCalculator.calculateSharpeRatio(periodicReturnRate))
+                .beta(beta)
                 .build();
     }
 
     private StockReturnData calculateStockReturn(String ticker, ChartResponse chartResponse, boolean includeDividends,
-            double initialAmount, double weight) {
+            double initialAmount, double weight, List<Double> indexPrices) {
         // Extract prices and timestamps from chart response
         List<Double> prices = extractPrices(chartResponse);
         List<Long> timestamps = extractTimestamps(chartResponse);
         List<Dividend> dividends = includeDividends ? extractDividends(chartResponse) : Collections.emptyList();
-        return calculateStockReturn(ticker, prices, timestamps, dividends, initialAmount, weight);
+        if (prices.size() != indexPrices.size()) {
+            throw new IllegalArgumentException("Prices and index prices must have the same size");
+        }
+        return calculateStockReturn(ticker, prices, timestamps, dividends, initialAmount, weight, indexPrices);
     }
 
     private double calculateYearsBetweenPrices(List<Long> timestamps) {
@@ -292,7 +308,7 @@ public class PortfolioReturnService {
         return timestamps.stream().map(DateUtils::toLocalDate).toList();
     }
 
-    StockReturnData calculatePortfolioStockReturn(List<StockReturnData> stockReturns, List<Double> weights) {
+    StockReturnData calculatePortfolioStockReturn(List<StockReturnData> stockReturns, List<Double> weights, List<Double> indexPrices) {
         if (stockReturns == null || stockReturns.isEmpty()) {
             throw new UnsupportedOperationException();
         }
@@ -350,11 +366,11 @@ public class PortfolioReturnService {
             throw new IllegalArgumentException("Portfolio prices cannot be empty");
         }
         // 모든 ticker의 처의 가격
-        return calculateStockReturn("Portfolio", prices, timestamps, allDividends, initialAmount, 1.0);
+        return calculateStockReturn("Portfolio", prices, timestamps, allDividends, initialAmount, 1.0, indexPrices);
     }
 
     private PortfolioReturnData calculatePortfolioReturnData(List<StockReturnData> stockReturns,
-            List<Double> weights) {
+            List<Double> weights, List<Double> indexPrices) {
         if (stockReturns == null || stockReturns.isEmpty()) {
             throw new UnsupportedOperationException();
         }
@@ -369,7 +385,7 @@ public class PortfolioReturnService {
 
         portfolioData.setStartDate(startDate);
         portfolioData.setEndDate(endDate);
-        portfolioData.setPortfolioStockReturn(calculatePortfolioStockReturn(stockReturns, weights));
+        portfolioData.setPortfolioStockReturn(calculatePortfolioStockReturn(stockReturns, weights, indexPrices));
         return portfolioData;
     }
 }
