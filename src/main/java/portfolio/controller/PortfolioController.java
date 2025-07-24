@@ -6,6 +6,7 @@ import org.springframework.web.bind.annotation.*;
 import lombok.extern.slf4j.Slf4j;
 import portfolio.model.AnalysisReport;
 import portfolio.model.ChartData;
+import portfolio.model.PortfolioFullAnalysisResponse;
 import portfolio.model.PortfolioRequest;
 import portfolio.model.PortfolioReturnData;
 import portfolio.service.ChartGenerator;
@@ -27,23 +28,24 @@ public class PortfolioController {
      * 여러 분석/차트/리포트 데이터를 한 번에 반환하는 통합 엔드포인트
      */
     @PostMapping("/analyze/all")
-    public ResponseEntity<portfolio.model.PortfolioFullAnalysisResponse> analyzeAll(@RequestBody portfolio.model.PortfolioRequest request) {
+    public ResponseEntity<PortfolioFullAnalysisResponse> analyzeAll(@RequestBody PortfolioRequest request) {
         return ResponseEntity.ok(generateFullAnalysisResponse(request));
     }
 
     /**
      * 여러 분석/차트/리포트 데이터를 한 번에 생성하는 내부 메서드 (구조적 변경)
      */
-    private portfolio.model.PortfolioFullAnalysisResponse generateFullAnalysisResponse(portfolio.model.PortfolioRequest request) {
+    private PortfolioFullAnalysisResponse generateFullAnalysisResponse(PortfolioRequest request) {
         adjustToPreviousMonthLastDay(request);
         validateRequest(request);
-        portfolio.model.PortfolioReturnData portfolioData = portfolioReturnService.analyzePortfolio(request);
-        portfolio.model.ChartData timeSeriesChart = chartGenerator.generateTimeSeriesChart(portfolioData);
-        portfolio.model.ChartData comparisonChart = chartGenerator.generateComparisonChart(portfolioData);
-        portfolio.model.ChartData amountChart = chartGenerator.generateAmountChangeChart(portfolioData);
-        portfolio.model.AnalysisReport report = reportGenerator.generateReport(request, portfolioData);
-        return new portfolio.model.PortfolioFullAnalysisResponse(
-            portfolioData, timeSeriesChart, comparisonChart, null, amountChart, report
+        PortfolioReturnData portfolioData = portfolioReturnService.analyzePortfolio(request);
+        ChartData timeSeriesChart = chartGenerator.generateTimeSeriesChart(portfolioData);
+        ChartData comparisonChart = chartGenerator.generateComparisonChart(portfolioData);
+        ChartData amountChart = chartGenerator.generateAmountChangeChart(portfolioData);
+        ChartData dividendsAmountComparisonChart = chartGenerator.generateDividendsAmountComparisonChart(portfolioData);
+        AnalysisReport report = reportGenerator.generateReport(request, portfolioData);
+        return new PortfolioFullAnalysisResponse(
+            portfolioData, timeSeriesChart, comparisonChart, amountChart, dividendsAmountComparisonChart, report
         );
     }
 

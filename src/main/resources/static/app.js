@@ -66,6 +66,10 @@ async function handleFormSubmit(event) {
 
 // 통합 결과 표시 함수
 async function displayResultsAll(analysisResult) {
+    // 테스트: dividendsAmountComparisonChart 데이터 확인
+    if (analysisResult.dividendsAmountComparisonChart) {
+        console.log('dividendsAmountComparisonChart:', analysisResult.dividendsAmountComparisonChart);
+    }
     // 1. 포트폴리오 요약 표시
     displayPortfolioSummary(analysisResult.portfolioData);
 
@@ -106,6 +110,93 @@ async function createChartsAll(analysisResult) {
     } else {
         document.getElementById('maxDrawdownChartSection').style.display = 'none';
     }
+
+    // 배당금 비교 차트
+    if (analysisResult.dividendsAmountComparisonChart) {
+        createDividendsAmountComparisonChart(analysisResult.dividendsAmountComparisonChart);
+        document.getElementById('dividendsAmountComparisonChartSection').style.display = 'block';
+    } else {
+        document.getElementById('dividendsAmountComparisonChartSection').style.display = 'none';
+    }
+}
+
+// 배당금 비교 차트 생성 (Chart.js 막대그래프)
+let dividendsComparisonChart = null;
+function createDividendsAmountComparisonChart(chartData) {
+    const container = document.getElementById('dividends-amount-comparison-chart');
+    if (!container) return;
+    container.innerHTML = '';
+    if (!chartData || !chartData.series || !chartData.labels) {
+        container.textContent = '배당금 데이터가 없습니다.';
+        return;
+    }
+
+    // 캔버스 생성 및 추가
+    const canvas = document.createElement('canvas');
+    canvas.id = 'dividendsComparisonChart';
+    container.appendChild(canvas);
+
+    // 기존 차트 제거
+    if (dividendsComparisonChart) {
+        dividendsComparisonChart.destroy();
+    }
+
+    // 차트 데이터 변환
+    const { series, labels, configuration, title } = chartData;
+    const stockNames = Object.keys(series);
+    const years = labels;
+    const datasets = stockNames.map((stock, index) => ({
+        label: stock,
+        data: series[stock],
+        backgroundColor: getChartColor(index, 0.7, stock),
+        borderColor: getChartColor(index, 1, stock),
+        borderWidth: 2
+    }));
+
+    // 차트 옵션
+    const options = {
+        responsive: true,
+        plugins: {
+            legend: { display: configuration?.showLegend !== false },
+            title: {
+                display: !!title,
+                text: title || '연도별 배당금 비교'
+            },
+            tooltip: { enabled: true }
+        },
+        scales: {
+            x: {
+                title: {
+                    display: !!(configuration && configuration.xaxisLabel),
+                    text: configuration?.xaxisLabel || '연도'
+                },
+                ticks: { autoSkip: false }
+            },
+
+            y: {
+                display: true,
+                title: {
+                    display: true,
+                    text: '금액 ($)'
+                },
+                ticks: {
+                    callback: function (value) {
+                        return '$' + value.toLocaleString();
+                    }
+                }
+            }
+        }
+    };
+
+    // Chart.js 막대그래프 생성
+    dividendsComparisonChart = new Chart(canvas.getContext('2d'), {
+        type: 'bar',
+        data: {
+            labels: years,
+            datasets: datasets
+        },
+        options: options
+    });
 }
 
 

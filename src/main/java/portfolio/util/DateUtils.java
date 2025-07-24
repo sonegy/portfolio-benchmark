@@ -13,16 +13,16 @@ public class DateUtils {
      * @param date LocalDate to convert
      * @return unix timestamp as long
      */
-    public static long toUnixTimestamp(LocalDate date) {
+    public static long toUnixTimeSeconds(LocalDate date) {
         return date.atStartOfDay().toEpochSecond(ZoneOffset.UTC);
     }
-    
+
     /**
      * Convert LocalDateTime to unix timestamp (seconds since epoch)
      * @param dateTime LocalDateTime to convert
      * @return unix timestamp as long
      */
-    public static long toUnixTimestamp(LocalDateTime dateTime) {
+    public static long toUnixTimeSeconds(LocalDateTime dateTime) {
         return dateTime.toEpochSecond(ZoneOffset.UTC);
     }
     
@@ -31,17 +31,17 @@ public class DateUtils {
      * @param dateString date in yyyy-MM-dd format
      * @return unix timestamp as long
      */
-    public static long toUnixTimestamp(String dateString) {
+    public static long toUnixTimeSeconds(String dateString) {
         LocalDate date = LocalDate.parse(dateString, DateTimeFormatter.ISO_LOCAL_DATE);
-        return toUnixTimestamp(date);
+        return toUnixTimeSeconds(date);
     }
     
     /**
      * Get unix timestamp for start of today
      * @return unix timestamp as long
      */
-    public static long todayUnixTimestamp() {
-        return toUnixTimestamp(LocalDate.now());
+    public static long todayUnixTimeSeconds() {
+        return toUnixTimeSeconds(LocalDate.now());
     }
     
     /**
@@ -49,8 +49,8 @@ public class DateUtils {
      * @param daysAgo number of days to subtract from today
      * @return unix timestamp as long
      */
-    public static long daysAgoUnixTimestamp(int daysAgo) {
-        return toUnixTimestamp(LocalDate.now().minusDays(daysAgo));
+    public static long daysAgoUnixTimeSeconds(int daysAgo) {
+        return toUnixTimeSeconds(LocalDate.now().minusDays(daysAgo));
     }
 
     /**

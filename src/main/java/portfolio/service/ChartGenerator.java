@@ -1,9 +1,12 @@
 package portfolio.service;
 
 import org.springframework.stereotype.Service;
+
+import portfolio.api.ChartResponse.Dividend;
 import portfolio.model.ChartData;
 import portfolio.model.PortfolioReturnData;
 import portfolio.model.StockReturnData;
+import portfolio.util.DateUtils;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -11,6 +14,8 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.TreeSet;
 
 /**
  * 다양한 형태의 차트 생성을 담당하는 서비스
@@ -23,6 +28,53 @@ public class ChartGenerator {
 
     public ChartGenerator(ChartConfigurationService configurationService) {
         this.configurationService = configurationService;
+    }
+
+    /**
+     * 여러 종목의 연도별 배당금 합계 데이터를 반환
+     * 
+     * @param stockReturnDataList 각 종목별 수익 데이터 리스트
+     * @return Map<String, Map<Integer, Double>> (티커별 -> 연도별 -> 배당금 합계)
+     */
+    public Map<String, Map<Integer, Double>> calculateAllYearlyDividends(List<StockReturnData> stockReturnDataList) {
+        Map<String, Map<Integer, Double>> result = new LinkedHashMap<>();
+        if (stockReturnDataList == null)
+            return result;
+        for (StockReturnData stock : stockReturnDataList) {
+            if (stock == null)
+                continue;
+            result.put(stock.getTicker(), calculateYearlyDividends(stock));
+        }
+        return result;
+    }
+
+    /**
+     * 단일 종목의 연도별 배당금 합계 데이터를 반환
+     * 
+     * @param stock 단일 종목 수익 데이터
+     * @return Map<Integer, Double> (연도별 -> 배당금 합계)
+     */
+    public Map<Integer, Double> calculateYearlyDividends(StockReturnData stock) {
+        Map<Integer, Double> yearly = new HashMap<>();
+        if (stock == null || stock.getDividends() == null)
+            return yearly;
+
+        // 실제 보유 주식수 계산: initialAmount / 시작가격
+        double shares = 1.0;
+        if (stock.getInitialAmount() > 0 && stock.getPrices() != null && !stock.getPrices().isEmpty()
+                && stock.getPrices().get(0) > 0) {
+            shares = stock.getInitialAmount() / stock.getPrices().get(0);
+        }
+
+        for (Dividend div : stock.getDividends()) {
+            if (div == null)
+                continue;
+            long seconds = div.getDate();
+            int year = DateUtils.toLocalDate(seconds).getYear();
+            double amount = div.getAmount() * shares;
+            yearly.put(year, yearly.getOrDefault(year, 0.0) + amount);
+        }
+        return yearly;
     }
 
     /**
@@ -55,6 +107,57 @@ public class ChartGenerator {
                 dates,
                 series,
                 config);
+    }
+
+    /**
+     * 연도별 주식별 배당금 합계 비교 차트 데이터 생성
+     * 
+     * @param portfolioData 포트폴리오 수익 데이터
+     * @return ChartData (labels: 연도, series: 티커별 연도별 배당 합계)
+     */
+    public ChartData generateDividendsAmountComparisonChart(PortfolioReturnData portfolioData) {
+        // List<StockReturnData> stockReturns = portfolioData.getStockReturns();
+        List<StockReturnData> stockReturns = new ArrayList<>();
+        stockReturns.add(portfolioData.getPortfolioStockReturn());
+        stockReturns.addAll(portfolioData.getStockReturns());
+        if (stockReturns == null || stockReturns.isEmpty()) {
+            return new ChartData(
+                    "연도별 배당금 비교",
+                    "bar",
+                    new ArrayList<>(),
+                    new HashMap<>(),
+                    configurationService.createAmountChartConfiguration());
+        }
+        // 1. 연도별 배당금 합계 계산
+        Map<String, Map<Integer, Double>> yearlyDividends = calculateAllYearlyDividends(stockReturns);
+        // 2. 전체 연도 추출(오름차순)
+        Set<Integer> yearSet = new TreeSet<>();
+        for (Map<Integer, Double> yearMap : yearlyDividends.values()) {
+            yearSet.addAll(yearMap.keySet());
+        }
+        List<Integer> years = new ArrayList<>(yearSet);
+        // 3. labels: 연도 리스트(문자열)
+        List<String> labels = years.stream().map(String::valueOf).toList();
+        // 4. series: 티커별로 연도별 합계(Double, 없는 연도는 0.0)
+        Map<String, List<Double>> series = new LinkedHashMap<>();
+        for (String ticker : yearlyDividends.keySet()) {
+            Map<Integer, Double> yearMap = yearlyDividends.get(ticker);
+            List<Double> data = new ArrayList<>();
+            for (Integer year : years) {
+                data.add(yearMap.getOrDefault(year, 0.0));
+            }
+            series.put(ticker, data);
+        }
+        // 5. 차트 config
+        ChartData.ChartConfiguration config = configurationService.createComparisonConfiguration();
+        // 6. ChartData 생성 및 반환
+        return new ChartData(
+                "연도별 분배금 비교",
+                "bar",
+                List.of(),
+                series,
+                config,
+                labels);
     }
 
     /**

@@ -47,8 +47,8 @@ public class PortfolioReturnService {
         validateRequest(request);
 
         // Convert dates to timestamps
-        long period1 = DateUtils.toUnixTimestamp(request.getStartDate());
-        long period2 = DateUtils.toUnixTimestamp(request.getEndDate());
+        long period1 = DateUtils.toUnixTimeSeconds(request.getStartDate());
+        long period2 = DateUtils.toUnixTimeSeconds(request.getEndDate());
         boolean includeDividends = request.isIncludeDividends();
         log.debug("analyzePortfolio request:{}", JsonLoggingUtils.toJsonPretty(request));
 

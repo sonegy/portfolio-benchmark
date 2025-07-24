@@ -6,7 +6,7 @@ import org.springframework.test.context.ActiveProfiles;
 import lombok.extern.slf4j.Slf4j;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static portfolio.util.DateUtils.toUnixTimestamp;
+import static portfolio.util.DateUtils.toUnixTimeSeconds;
 
 import java.time.LocalDate;
 import java.time.ZoneOffset;
@@ -36,9 +36,9 @@ class ReturnCalculatorTest {
         ReturnCalculator calculator = new ReturnCalculator();
         List<Double> prices = List.of(100.0, 110.0, 121.0); // 월별 가격
         List<Long> timestamps = List.of(
-                toUnixTimestamp(LocalDate.of(2023, 1, 1)),
-                toUnixTimestamp(LocalDate.of(2023, 2, 1)),
-                toUnixTimestamp(LocalDate.of(2023, 3, 1)));
+                toUnixTimeSeconds(LocalDate.of(2023, 1, 1)),
+                toUnixTimeSeconds(LocalDate.of(2023, 2, 1)),
+                toUnixTimeSeconds(LocalDate.of(2023, 3, 1)));
         List<Dividend> dividends = List.of();
 
         // When
@@ -63,18 +63,18 @@ class ReturnCalculatorTest {
                 484.6199951171875, 500.1300048828125, 505.92999267578125, 518.0399780273438, 527.6699829101562,
                 522.6699829101562, 553.4500122070312, 538.8099975585938);
         List<Long> timestamps = List.of(
-                toUnixTimestamp(LocalDate.of(2023, 1, 1)),
-                toUnixTimestamp(LocalDate.of(2023, 2, 1)),
-                toUnixTimestamp(LocalDate.of(2023, 3, 1)),
-                toUnixTimestamp(LocalDate.of(2023, 4, 1)),
-                toUnixTimestamp(LocalDate.of(2023, 5, 1)),
-                toUnixTimestamp(LocalDate.of(2023, 6, 1)),
-                toUnixTimestamp(LocalDate.of(2023, 7, 1)),
-                toUnixTimestamp(LocalDate.of(2023, 8, 1)),
-                toUnixTimestamp(LocalDate.of(2023, 9, 1)),
-                toUnixTimestamp(LocalDate.of(2023, 10, 1)),
-                toUnixTimestamp(LocalDate.of(2023, 11, 1)),
-                toUnixTimestamp(LocalDate.of(2023, 12, 1)));
+                toUnixTimeSeconds(LocalDate.of(2023, 1, 1)),
+                toUnixTimeSeconds(LocalDate.of(2023, 2, 1)),
+                toUnixTimeSeconds(LocalDate.of(2023, 3, 1)),
+                toUnixTimeSeconds(LocalDate.of(2023, 4, 1)),
+                toUnixTimeSeconds(LocalDate.of(2023, 5, 1)),
+                toUnixTimeSeconds(LocalDate.of(2023, 6, 1)),
+                toUnixTimeSeconds(LocalDate.of(2023, 7, 1)),
+                toUnixTimeSeconds(LocalDate.of(2023, 8, 1)),
+                toUnixTimeSeconds(LocalDate.of(2023, 9, 1)),
+                toUnixTimeSeconds(LocalDate.of(2023, 10, 1)),
+                toUnixTimeSeconds(LocalDate.of(2023, 11, 1)),
+                toUnixTimeSeconds(LocalDate.of(2023, 12, 1)));
         List<Dividend> dividends = List.of();
 
         // When
@@ -90,12 +90,12 @@ class ReturnCalculatorTest {
         ReturnCalculator calculator = new ReturnCalculator();
         List<Double> prices = List.of(100.0, 110.0, 108.0);
         List<Long> timestamps = List.of(
-                toUnixTimestamp(LocalDate.of(2023, 1, 1)),
-                toUnixTimestamp(LocalDate.of(2023, 2, 1)),
-                toUnixTimestamp(LocalDate.of(2023, 3, 1)));
+                toUnixTimeSeconds(LocalDate.of(2023, 1, 1)),
+                toUnixTimeSeconds(LocalDate.of(2023, 2, 1)),
+                toUnixTimeSeconds(LocalDate.of(2023, 3, 1)));
         Dividend dividend = new Dividend();
         dividend.setAmount(2.0);
-        dividend.setDate(toUnixTimestamp(LocalDate.of(2023, 2, 3)));
+        dividend.setDate(toUnixTimeSeconds(LocalDate.of(2023, 2, 3)));
         List<Dividend> dividends = List.of(dividend);
 
         // When
@@ -229,9 +229,9 @@ class ReturnCalculatorTest {
         ReturnCalculator calculator = new ReturnCalculator();
         List<Double> prices = List.of(100.0, 110.0, 121.0);
         List<Long> timestamps = List.of(
-                toUnixTimestamp(LocalDate.of(2023, 1, 1)),
-                toUnixTimestamp(LocalDate.of(2023, 1, 2)),
-                toUnixTimestamp(LocalDate.of(2023, 1, 3)));
+                toUnixTimeSeconds(LocalDate.of(2023, 1, 1)),
+                toUnixTimeSeconds(LocalDate.of(2023, 1, 2)),
+                toUnixTimeSeconds(LocalDate.of(2023, 1, 3)));
         List<Dividend> dividends = List.of();
 
         // When
@@ -250,13 +250,13 @@ class ReturnCalculatorTest {
         ReturnCalculator calculator = new ReturnCalculator();
         List<Double> prices = List.of(100.0, 110.0, 108.0); // Price drops after dividend ex-date
         List<Long> timestamps = List.of(
-                toUnixTimestamp(LocalDate.of(2023, 1, 1)),
-                toUnixTimestamp(LocalDate.of(2023, 1, 5)),
-                toUnixTimestamp(LocalDate.of(2023, 1, 10)));
+                toUnixTimeSeconds(LocalDate.of(2023, 1, 1)),
+                toUnixTimeSeconds(LocalDate.of(2023, 1, 5)),
+                toUnixTimeSeconds(LocalDate.of(2023, 1, 10)));
 
         Dividend dividend = new Dividend();
         dividend.setAmount(2.0);
-        dividend.setDate(toUnixTimestamp(LocalDate.of(2023, 1, 3)));
+        dividend.setDate(toUnixTimeSeconds(LocalDate.of(2023, 1, 3)));
         List<Dividend> dividends = List.of(dividend);
 
         // When
@@ -285,13 +285,13 @@ class ReturnCalculatorTest {
         ReturnCalculator calculator = new ReturnCalculator();
         List<Double> prices = List.of(100.0, 110.0); // Prices are for Day 1 and Day 3
         List<Long> timestamps = List.of(
-                toUnixTimestamp(LocalDate.of(2023, 1, 1)),
-                toUnixTimestamp(LocalDate.of(2023, 1, 3)));
+                toUnixTimeSeconds(LocalDate.of(2023, 1, 1)),
+                toUnixTimeSeconds(LocalDate.of(2023, 1, 3)));
 
         Dividend dividend = new Dividend();
         dividend.setAmount(2.0);
         // Dividend is paid on Day 2, where there is no price point
-        dividend.setDate(toUnixTimestamp(LocalDate.of(2023, 1, 2)));
+        dividend.setDate(toUnixTimeSeconds(LocalDate.of(2023, 1, 2)));
         List<Dividend> dividends = List.of(dividend);
 
         // When
@@ -316,8 +316,8 @@ class ReturnCalculatorTest {
         ReturnCalculator calculator = new ReturnCalculator();
         List<Double> prices = List.of(100.0, 110.0); // Day 1 and Day 4
         List<Long> timestamps = List.of(
-                toUnixTimestamp(LocalDate.of(2023, 1, 1)),
-                toUnixTimestamp(LocalDate.of(2023, 1, 4)));
+                toUnixTimeSeconds(LocalDate.of(2023, 1, 1)),
+                toUnixTimeSeconds(LocalDate.of(2023, 1, 4)));
 
         Dividend div1 = new Dividend();
         div1.setAmount(2.0);

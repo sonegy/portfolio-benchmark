@@ -305,6 +305,8 @@ public class ReturnCalculator {
                 cash = 0;
             }
 
+            log.debug("calculateCumulativeAmounts shares {} cash {}", shares, cash);
+
             cumulativeAmounts.add(new Amount(shares, currentPrice));
         }
 
