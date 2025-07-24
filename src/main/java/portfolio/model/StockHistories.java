@@ -1,4 +1,4 @@
-package portfolio.service.stockdata;
+package portfolio.model;
 
 import java.util.List;
 

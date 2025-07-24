@@ -1,9 +1,10 @@
-package portfolio.service.stockdata;
+package portfolio.service;
 
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 import java.util.*;
 import portfolio.api.ChartResponse;
+import portfolio.model.FetchedStockDatas;
 
 class FetchedStockDatasTest {
     @Test

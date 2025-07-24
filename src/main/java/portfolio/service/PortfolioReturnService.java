@@ -5,11 +5,10 @@ import org.springframework.stereotype.Service;
 import lombok.extern.slf4j.Slf4j;
 import portfolio.api.ChartResponse;
 import portfolio.api.ChartResponse.Dividend;
+import portfolio.model.FetchedStockDatas;
 import portfolio.model.PortfolioRequest;
 import portfolio.model.PortfolioReturnData;
 import portfolio.model.StockReturnData;
-import portfolio.service.stockdata.FetchedStockDatas;
-import portfolio.service.stockdata.StockReturnCalculator;
 import portfolio.util.DateUtils;
 import portfolio.util.JsonLoggingUtils;
 

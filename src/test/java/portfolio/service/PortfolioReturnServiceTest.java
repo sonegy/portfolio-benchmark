@@ -10,7 +10,6 @@ import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.*;
 import portfolio.model.PortfolioRequest;
-import portfolio.service.stockdata.StockReturnCalculator;
 
 class PortfolioReturnServiceTest {
     @Mock

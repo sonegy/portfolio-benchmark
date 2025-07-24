@@ -1,4 +1,4 @@
-package portfolio.service.stockdata;
+package portfolio.service;
 
 import static java.util.Collections.emptyList;
 import static java.util.Objects.requireNonNullElse;
@@ -10,10 +10,11 @@ import java.util.List;
 
 import portfolio.api.ChartResponse.Dividend;
 import portfolio.model.Amount;
+import portfolio.model.FetchedStockDatas;
 import portfolio.model.PortfolioRequest;
 import portfolio.model.StockReturnData;
 import portfolio.model.ReturnRate;
-import portfolio.service.ReturnCalculator;
+import portfolio.model.StockHistories;
 import portfolio.util.DateUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
