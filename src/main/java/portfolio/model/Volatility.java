@@ -3,7 +3,6 @@ package portfolio.model;
 import java.util.List;
 
 import lombok.extern.slf4j.Slf4j;
-import portfolio.util.JsonLoggingUtils;
 
 @Slf4j
 public class Volatility {

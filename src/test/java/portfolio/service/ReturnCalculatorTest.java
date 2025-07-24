@@ -12,7 +12,6 @@ import java.time.LocalDate;
 import java.time.ZoneOffset;
 import java.util.List;
 import portfolio.api.ChartResponse.Dividend;
-import portfolio.model.Amount;
 import portfolio.model.ReturnRate;
 
 @Slf4j

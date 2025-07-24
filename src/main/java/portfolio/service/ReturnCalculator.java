@@ -4,15 +4,12 @@ import java.util.ArrayList;
 import java.util.List;
 import org.springframework.stereotype.Service;
 
-import com.fasterxml.jackson.databind.module.SimpleModule;
-
 import lombok.extern.slf4j.Slf4j;
 import portfolio.api.ChartResponse.Dividend;
 import portfolio.model.Amount;
 import portfolio.model.CAGR;
 import portfolio.model.ReturnRate;
 import portfolio.model.Volatility;
-import portfolio.util.JsonLoggingUtils;
 import org.apache.commons.math3.stat.correlation.Covariance;
 import org.apache.commons.math3.stat.descriptive.moment.Variance;
 
