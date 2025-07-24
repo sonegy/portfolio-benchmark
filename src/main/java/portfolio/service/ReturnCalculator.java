@@ -1,5 +1,6 @@
 package portfolio.service;
 
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import org.springframework.stereotype.Service;
@@ -10,6 +11,8 @@ import portfolio.model.Amount;
 import portfolio.model.CAGR;
 import portfolio.model.ReturnRate;
 import portfolio.model.Volatility;
+import portfolio.util.DateUtils;
+
 import org.apache.commons.math3.stat.correlation.Covariance;
 import org.apache.commons.math3.stat.descriptive.moment.Variance;
 
@@ -26,12 +29,14 @@ public class ReturnCalculator {
 
     /**
      * ETF와 시장 월별 수익률로 베타를 계산합니다.
-     * @param etfReturns ETF 월별 수익률
+     * 
+     * @param etfReturns    ETF 월별 수익률
      * @param marketReturns 시장 월별 수익률
      * @return 베타 값
      */
     public double calculateBeta(List<Double> etfReturns, List<Double> marketReturns) {
-        if (etfReturns == null || marketReturns == null || etfReturns.size() != marketReturns.size() || etfReturns.size() < 2) {
+        if (etfReturns == null || marketReturns == null || etfReturns.size() != marketReturns.size()
+                || etfReturns.size() < 2) {
             throw new IllegalArgumentException("Input lists must be non-null, same size, and have at least 2 elements");
         }
         // finmath-lib 사용
@@ -41,7 +46,6 @@ public class ReturnCalculator {
         double var = new Variance().evaluate(y);
         return cov / var;
     }
-
 
     /**
      * 가격 리스트가 null이 아니고 최소 두 개 이상의 가격을 포함하는지 검증합니다.
@@ -135,7 +139,7 @@ public class ReturnCalculator {
             throw new IllegalArgumentException("Start price must be positive for cumulative return calculation.");
         }
 
-        List<Amount> cumulativeValues = calculateCumulativeAmounts(prices, timestamps, dividends, 1.0);
+        List<Amount> cumulativeValues = calculateCumulativeAmounts(true, prices, timestamps, dividends, 1.0);
 
         List<ReturnRate> cumulativeReturnRates = new ArrayList<>();
         for (Amount amount : cumulativeValues) {
@@ -143,20 +147,6 @@ public class ReturnCalculator {
             cumulativeReturnRates.add(returnRate);
         }
         return cumulativeReturnRates;
-    }
-
-    /**
-     * 배당 재투자를 포함하여 초기 투자 금액이 시간에 따라 어떻게 변화하는지 계산합니다.
-     *
-     * @param prices        가격 리스트 (시간순 정렬)
-     * @param timestamps    각 가격에 대응하는 타임스탬프 리스트
-     * @param dividends     기간 중 지급된 배당금 리스트
-     * @param initialAmount 초기 투자 금액
-     * @return 각 시점별 투자 가치 리스트
-     */
-    public List<Amount> calculateAmountChanges(List<Double> prices, List<Long> timestamps, List<Dividend> dividends,
-            double initialAmount) {
-        return calculateCumulativeAmounts(prices, timestamps, dividends, initialAmount, 1.0);
     }
 
     /**
@@ -169,13 +159,14 @@ public class ReturnCalculator {
      * @param weight        이 자산에 투자할 비율(0.0~1.0)
      * @return 각 시점별 가중 투자 가치 리스트
      */
-    public List<Amount> calculateCumulativeAmounts(List<Double> prices, List<Long> timestamps, List<Dividend> dividends,
+    public List<Amount> calculateCumulativeAmounts(boolean includeDividends, List<Double> prices, List<Long> timestamps,
+            List<Dividend> dividends,
             double initialAmount, double weight) {
         double startPrice = prices.get(0);
         if (startPrice <= 0) {
             List<Amount> amountChanges = new ArrayList<>();
             for (int i = 0; i < prices.size(); i++) {
-                amountChanges.add(new Amount(0, prices.get(i)));
+                amountChanges.add(new Amount(0, prices.get(i), 0));
             }
             log.error("startPrice is less than or equal to 0");
             return amountChanges;
@@ -184,7 +175,7 @@ public class ReturnCalculator {
         double allocatedAmount = initialAmount * weight;
         double initialShares = allocatedAmount / startPrice;
 
-        return calculateCumulativeAmounts(prices, timestamps, dividends, initialShares);
+        return calculateCumulativeAmounts(includeDividends, prices, timestamps, dividends, initialShares);
     }
 
     /**
@@ -198,7 +189,7 @@ public class ReturnCalculator {
     }
 
     /**
-     * 초기 투자금액 1.0으로 설정하고, 배당 재투자를 포함하여 시간에 따라 포트폴리오의 수익률을 계산합니다.
+     * 초기 투자금액 1.0으로 설정하고, 시간에 따라 포트폴리오의 수익률을 계산합니다.
      * timestamps에 따른 기간별 수익율
      *
      * @param prices     가격 리스트 (시간순 정렬)
@@ -206,16 +197,16 @@ public class ReturnCalculator {
      * @param dividends  기간 중 지급된 배당금 리스트
      * @return 각 시점별 포트폴리오의 수익률 리스트
      */
-    public List<ReturnRate> calculatePeriodicReturnRates(List<Double> prices, List<Long> timestamps,
-            List<Dividend> dividends) {
-        List<Amount> pList = calculateCumulativeAmounts(prices, timestamps, dividends, 1.0);
+    public List<ReturnRate> calculatePeriodicReturnRates(List<Double> prices, List<Long> timestamps) {
+        List<Amount> pList = calculateCumulativeAmounts(false, prices, timestamps, List.of(), 1.0);
         List<ReturnRate> returns = new ArrayList<>();
         for (int i = 1; i < pList.size(); i++) {
             Double current = pList.get(i).amount();
             Double prev = pList.get(i - 1).amount();
             // double r = (current - prev) / prev;
             ReturnRate returnRate = new ReturnRate(prev, current);
-//            log.debug("calculateReturn {} current {} prev {} r {}", i, current, prev, returnRate);
+            // log.debug("calculateReturn {} current {} prev {} r {}", i, current, prev,
+            // returnRate);
             returns.add(returnRate);
         }
         return returns;
@@ -239,7 +230,8 @@ public class ReturnCalculator {
                 peak = price;
             }
             double drawdown = (peak == 0.0) ? 0.0 : (peak - price) / peak;
-            // log.debug("calculateMaxDrawdowns price {} peak {} drawdown {}", price, peak, drawdown);
+            // log.debug("calculateMaxDrawdowns price {} peak {} drawdown {}", price, peak,
+            // drawdown);
             drawdowns.add(drawdown);
         }
         return drawdowns;
@@ -257,7 +249,8 @@ public class ReturnCalculator {
      * @param initialShares 초기 보유 주식 수
      * @return 각 시점별 포트폴리오 가치 리스트
      */
-    private List<Amount> calculateCumulativeAmounts(List<Double> prices, List<Long> timestamps,
+    private List<Amount> calculateCumulativeAmounts(boolean includeDividends, List<Double> prices,
+            List<Long> timestamps,
             List<Dividend> dividends,
             double initialShares) {
         if (prices == null || prices.isEmpty() || timestamps == null || timestamps.isEmpty()) {
@@ -276,38 +269,52 @@ public class ReturnCalculator {
             sortedDividends.addAll(dividends);
             sortedDividends.sort((d1, d2) -> Long.compare(d1.getDate(), d2.getDate()));
         }
+        log.debug("sortedDividends.size() {}", sortedDividends.size());
 
         double shares = initialShares;
         double cash = 0.0;
 
         for (int i = 0; i < prices.size(); i++) {
             long currentTimestamp = timestamps.get(i);
+            LocalDate currentDate = DateUtils.toLocalDate(currentTimestamp);
+            // 월말로 변경 배당금은 1일 이후에 발생하기 때문
+            currentDate = currentDate.withDayOfMonth(currentDate.lengthOfMonth());
             double currentPrice = prices.get(i);
-            long previousTimestamp = (i == 0) ? 0 : timestamps.get(i - 1);
 
             // Accumulate cash from dividends paid between the last price point and the
             // current one
             java.util.Iterator<Dividend> iterator = sortedDividends.iterator();
             while (iterator.hasNext()) {
-                Dividend div = iterator.next();
-                if (div.getDate() > previousTimestamp && div.getDate() <= currentTimestamp) {
-                    cash += shares * div.getAmount();
+                final Dividend div = iterator.next();
+                final LocalDate divDate = DateUtils.toLocalDate(div.getDate());
+                final double amount = div.getAmount();
+
+                if (divDate.isEqual(currentDate) || divDate.isBefore(currentDate)) {
+                    log.debug("currentDate {} divDate {} div.getAmount() {}", currentDate, divDate, amount);
+                    cash += shares * amount;
                     iterator.remove(); // Simplify by removing processed dividends
-                } else if (div.getDate() > currentTimestamp) {
+                } else {
                     // Since the list is sorted, we can stop checking for this period
                     break;
                 }
             }
+            // log.debug("cash {}", cash);
 
+            double saveCash = 0.0;
             // Reinvest any available cash at the current price
             if (cash > 0 && currentPrice > 0) {
-                shares += cash / currentPrice;
+                // 배당금 재투자
+                if (includeDividends) {
+                    shares += cash / currentPrice;
+                }
+                saveCash = cash;
                 cash = 0;
+            } else {
+                saveCash = 0.0;
             }
-
-            log.debug("calculateCumulativeAmounts shares {} cash {}", shares, cash);
-
-            cumulativeAmounts.add(new Amount(shares, currentPrice));
+            // log.debug("calculateCumulativeAmounts shares {} saveCash {}", shares,
+            // saveCash);
+            cumulativeAmounts.add(new Amount(shares, currentPrice, saveCash));
         }
 
         return cumulativeAmounts;
@@ -320,7 +327,7 @@ public class ReturnCalculator {
             if (value > max) {
                 max = value;
             }
-//            log.debug("calculateMaxValue max {} value {}", max, value);
+            // log.debug("calculateMaxValue max {} value {}", max, value);
         }
         return max;
     }

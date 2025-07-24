@@ -36,11 +36,7 @@ public class StockReturnData {
      * 분배율(가중치)이 적용될 수 있음
      */
     private List<Double> cumulativeReturns;
-    /**
-     * 누적 슈익율 시계열 
-     * 분배율이 적용되지 않음.
-     */
-    private List<Double> cumulativePriceReturns;
+    
     /** 가격 데이터에 대응하는 날짜 리스트 */
     private List<LocalDate> dates;
     /**
@@ -48,6 +44,11 @@ public class StockReturnData {
      * 분배율(가중치)이 적용될 수 있음
      */
     private List<Double> amountChanges;
+
+    /**
+     * 분배율의 금액 배당 재투자인경우 합산됨
+     */
+    private List<Double> amountDividens;
     /**
      * 기간별 수익률 목록 (예: 0.1, 0.2, 0.1, -0.1)
      * 각 기간별 수익률을 나타냄

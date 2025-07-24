@@ -17,10 +17,6 @@ public class PortfolioDataService {
         this.stockFetcher = stockFetcher;
     }
     
-    public CompletableFuture<Map<String, ChartResponse>> fetchMultipleStocks(List<String> tickers, long period1, long period2) {
-        return fetchMultipleData(tickers, period1, period2, stockFetcher::fetchHistory);
-    }
-    
     public CompletableFuture<Map<String, ChartResponse>> fetchMultipleDividends(List<String> tickers, long period1, long period2) {
         return fetchMultipleData(tickers, period1, period2, stockFetcher::fetchDividends);
     }

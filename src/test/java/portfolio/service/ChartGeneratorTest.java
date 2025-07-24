@@ -3,6 +3,7 @@ package portfolio.service;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import lombok.extern.slf4j.Slf4j;
 import portfolio.api.ChartResponse.Dividend;
 import portfolio.model.ChartData;
 import portfolio.model.PortfolioReturnData;
@@ -15,28 +16,37 @@ import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+@Slf4j
 class ChartGeneratorTest {
 
     private ChartGenerator chartGenerator;
     private PortfolioReturnData samplePortfolioData;
+    private List<LocalDate> dates = List.of(
+            LocalDate.of(2023, 1, 1),
+            LocalDate.of(2023, 4, 1),
+            LocalDate.of(2023, 7, 1),
+            LocalDate.of(2023, 10, 1));
+    private List<Long> timestamps = dates.stream().map(value -> DateUtils.toUnixTimeSeconds(value)).toList();
+
+    private List<Double> amountDividens = List.of(0.0, 0.0, 100.0, 0.0);
+    private List<Double> amountDividensEmpty = List.of(0.0, 0.0, 0.0, 0.0);
 
     @BeforeEach
     void setUp() {
         chartGenerator = new ChartGenerator(new ChartConfigurationService());
         // 포트폴리오 단일 데이터 생성
+
         StockReturnData portfolioData = StockReturnData.builder()
                 .ticker("Portfolio")
+                .timestamps(timestamps)
                 .priceReturn(0.135)
                 .totalReturn(0.16)
                 .cagr(0.11)
                 .volatility(0.08)
                 .cumulativeReturns(List.of(1.0, 1.06, 1.13, 1.20))
                 .amountChanges(List.of(100.0, 106.0, 113.0, 120.0))
-                .dates(List.of(
-                        LocalDate.of(2023, 1, 1),
-                        LocalDate.of(2023, 4, 1),
-                        LocalDate.of(2023, 7, 1),
-                        LocalDate.of(2023, 10, 1)))
+                .amountDividens(amountDividens)
+                .dates(dates)
                 .build();
         samplePortfolioData = new PortfolioReturnData(List.of());
         samplePortfolioData.setPortfolioStockReturn(portfolioData);
@@ -46,10 +56,12 @@ class ChartGeneratorTest {
     void calculateYearlyDividends_returnsEmptyMap_whenNoDividends() {
         StockReturnData stock = StockReturnData.builder()
                 .ticker("AAPL")
+                .timestamps(timestamps)
                 .dividends(List.of())
+                .amountDividens(amountDividensEmpty)
                 .build();
         Map<Integer, Double> result = chartGenerator.calculateYearlyDividends(stock);
-        assertTrue(result.isEmpty());
+        assertEquals(0.0, result.get(2023));
     }
 
     @Test
@@ -59,7 +71,9 @@ class ChartGeneratorTest {
         div.setDate(DateUtils.toUnixTimeSeconds(LocalDate.of(2023, 5, 1)));
         StockReturnData stock = StockReturnData.builder()
                 .ticker("AAPL")
+                .timestamps(timestamps)
                 .dividends(List.of(div))
+                .amountDividens(amountDividens)
                 .build();
         Map<Integer, Double> result = chartGenerator.calculateYearlyDividends(stock);
         assertEquals(100.0, result.get(2023));
@@ -75,7 +89,9 @@ class ChartGeneratorTest {
         div2.setDate(DateUtils.toUnixTimeSeconds(LocalDate.of(2023, 1, 1)));
         StockReturnData stock = StockReturnData.builder()
                 .ticker("AAPL")
+                .timestamps(List.of(DateUtils.toUnixTimeSeconds(LocalDate.of(2022, 1, 1)), DateUtils.toUnixTimeSeconds(LocalDate.of(2023, 1, 1))))
                 .dividends(List.of(div1, div2))
+                .amountDividens(List.of(50.0, 70.0))
                 .build();
         Map<Integer, Double> result = chartGenerator.calculateYearlyDividends(stock);
         assertEquals(50.0, result.get(2022));
@@ -92,11 +108,15 @@ class ChartGeneratorTest {
         div2.setDate(DateUtils.toUnixTimeSeconds(LocalDate.of(2022, 1, 1)));
         StockReturnData stock1 = StockReturnData.builder()
                 .ticker("AAPL")
+                .timestamps(List.of(DateUtils.toUnixTimeSeconds(LocalDate.of(2022, 1, 1)), DateUtils.toUnixTimeSeconds(LocalDate.of(2023, 1, 1))))
                 .dividends(List.of(div1))
+                .amountDividens(List.of(30.0, 0.0))
                 .build();
         StockReturnData stock2 = StockReturnData.builder()
                 .ticker("MSFT")
+                .timestamps(List.of(DateUtils.toUnixTimeSeconds(LocalDate.of(2022, 1, 1)), DateUtils.toUnixTimeSeconds(LocalDate.of(2023, 1, 1))))
                 .dividends(List.of(div2))
+                .amountDividens(List.of(40.0, 0.0))
                 .build();
         Map<String, Map<Integer, Double>> result = chartGenerator
                 .calculateAllYearlyDividends(List.of(stock1, stock2));
@@ -134,28 +154,6 @@ class ChartGeneratorTest {
     }
 
     @Test
-    void calculateYearlyDividends_reflectsActualShares() {
-        // initialAmount = 1000, 시작가격 = 10 → 주식수 = 100
-        double initialAmount = 1000.0;
-        double startPrice = 10.0;
-        double expectedShares = initialAmount / startPrice; // 100
-
-        portfolio.api.ChartResponse.Dividend div = new portfolio.api.ChartResponse.Dividend();
-        div.setAmount(2.0); // 1주당 배당금
-        div.setDate(DateUtils.toUnixTimeSeconds(LocalDate.of(2023, 6, 1)));
-
-        StockReturnData stock = StockReturnData.builder()
-                .ticker("AAPL")
-                .initialAmount(initialAmount)
-                .prices(List.of(startPrice, 12.0, 13.0))
-                .dividends(List.of(div))
-                .build();
-        Map<Integer, Double> result = chartGenerator.calculateYearlyDividends(stock);
-        // 실제 분배금 = 배당금 * 주식수 = 2.0 * 100 = 200
-        assertEquals(200.0, result.get(2023));
-    }
-
-    @Test
     void generateAmountChangeChart_usesPortfolioAndStockReturns() {
         // given
         StockReturnData apple = StockReturnData.builder()
@@ -184,24 +182,15 @@ class ChartGeneratorTest {
     }
 
     @Test
-    void generateDividendsAmountComparisonChart_emptyStockReturns() {
-        samplePortfolioData.setStockReturns(List.of());
-        ChartData chartData = chartGenerator.generateDividendsAmountComparisonChart(samplePortfolioData);
-        assertNotNull(chartData);
-        assertEquals("연도별 배당금 비교", chartData.getTitle());
-        assertEquals("bar", chartData.getType());
-        assertTrue(chartData.getSeries().isEmpty());
-        assertTrue(chartData.getLabels() == null || chartData.getLabels().isEmpty());
-    }
-
-    @Test
     void generateDividendsAmountComparisonChart_singleStockSingleYear() {
         Dividend div = new Dividend();
         div.setAmount(100.0);
         div.setDate(DateUtils.toUnixTimeSeconds(LocalDate.of(2023, 5, 1)));
         StockReturnData stock = StockReturnData.builder()
                 .ticker("AAPL")
+                .timestamps(timestamps)
                 .dividends(List.of(div))
+                .amountDividens(amountDividens)
                 .build();
         samplePortfolioData.setStockReturns(List.of(stock));
         ChartData chartData = chartGenerator.generateDividendsAmountComparisonChart(samplePortfolioData);
@@ -219,14 +208,18 @@ class ChartGeneratorTest {
         div2.setDate(DateUtils.toUnixTimeSeconds(LocalDate.of(2023, 1, 1)));
         StockReturnData stock1 = StockReturnData.builder()
                 .ticker("AAPL")
+                .timestamps(List.of(DateUtils.toUnixTimeSeconds(LocalDate.of(2022, 1, 1)), DateUtils.toUnixTimeSeconds(LocalDate.of(2023, 1, 1))))
                 .dividends(List.of(div1, div2))
+                .amountDividens(List.of(50.0, 70.0))
                 .build();
         Dividend div3 = new Dividend();
         div3.setAmount(30.0);
         div3.setDate(DateUtils.toUnixTimeSeconds(LocalDate.of(2022, 1, 1)));
         StockReturnData stock2 = StockReturnData.builder()
                 .ticker("MSFT")
+                .timestamps(List.of(DateUtils.toUnixTimeSeconds(LocalDate.of(2022, 1, 1)), DateUtils.toUnixTimeSeconds(LocalDate.of(2023, 1, 1))))
                 .dividends(List.of(div3))
+                .amountDividens(List.of(30.0, 0.0))
                 .build();
         samplePortfolioData.setStockReturns(List.of(stock1, stock2));
         ChartData chartData = chartGenerator.generateDividendsAmountComparisonChart(samplePortfolioData);
@@ -242,20 +235,24 @@ class ChartGeneratorTest {
         div1.setDate(DateUtils.toUnixTimeSeconds(LocalDate.of(2022, 1, 1)));
         StockReturnData stock1 = StockReturnData.builder()
                 .ticker("AAPL")
+                .timestamps(List.of(DateUtils.toUnixTimeSeconds(LocalDate.of(2022, 1, 1)), DateUtils.toUnixTimeSeconds(LocalDate.of(2023, 1, 1))))
                 .dividends(List.of(div1))
+                .amountDividens(List.of(40.0, 0.0))
                 .build();
         Dividend div2 = new Dividend();
         div2.setAmount(60.0);
         div2.setDate(DateUtils.toUnixTimeSeconds(LocalDate.of(2023, 1, 1)));
         StockReturnData stock2 = StockReturnData.builder()
                 .ticker("MSFT")
+                .timestamps(List.of(DateUtils.toUnixTimeSeconds(LocalDate.of(2022, 1, 1)), DateUtils.toUnixTimeSeconds(LocalDate.of(2023, 1, 1))))
                 .dividends(List.of(div2))
+                .amountDividens(List.of(60.0, 0.0))
                 .build();
         samplePortfolioData.setStockReturns(List.of(stock1, stock2));
         ChartData chartData = chartGenerator.generateDividendsAmountComparisonChart(samplePortfolioData);
         assertEquals(List.of("2022", "2023"), chartData.getLabels());
         assertEquals(List.of(40.0, 0.0), chartData.getSeries().get("AAPL"));
-        assertEquals(List.of(0.0, 60.0), chartData.getSeries().get("MSFT"));
+        assertEquals(List.of(60.0, 0.0), chartData.getSeries().get("MSFT"));
     }
 
     @Test

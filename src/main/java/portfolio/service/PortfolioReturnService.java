@@ -50,6 +50,7 @@ public class PortfolioReturnService {
         long period1 = DateUtils.toUnixTimeSeconds(request.getStartDate());
         long period2 = DateUtils.toUnixTimeSeconds(request.getEndDate());
         boolean includeDividends = request.isIncludeDividends();
+        List<Double> weights = request.getWeights();
         log.debug("analyzePortfolio request:{}", JsonLoggingUtils.toJsonPretty(request));
 
         // Fetch stock data
@@ -58,7 +59,7 @@ public class PortfolioReturnService {
         // Calculate returns for each stock
         List<StockReturnData> stockReturns = stockReturnCalculator.calculateStockReturns(request, fetchedStockDatas);
         // Calculate and set portfolio-level metrics
-        return calculatePortfolioReturnData(stockReturns, request.getWeights(), fetchedStockDatas.getIndexPrices());
+        return calculatePortfolioReturnData(includeDividends, stockReturns, weights, fetchedStockDatas.getIndexPrices());
     }
 
     private FetchedStockDatas fetchStockData(List<String> tickers, long period1, long period2,
@@ -69,13 +70,7 @@ public class PortfolioReturnService {
         var requestTickers = new ArrayList<>(tickers);
         requestTickers.add(INDEX);
 
-        CompletableFuture<Map<String, ChartResponse>> future;
-        if (includeDividends) {
-            future = portfolioDataService.fetchMultipleDividends(requestTickers, period1, period2);
-        } else {
-            future = portfolioDataService.fetchMultipleStocks(requestTickers, period1, period2);
-        }
-        var result = future.join();
+        var result = portfolioDataService.fetchMultipleDividends(requestTickers, period1, period2).join();
         if (!result.containsKey(INDEX)) {
             throw new IllegalArgumentException("Index data not found");
         }
@@ -83,7 +78,7 @@ public class PortfolioReturnService {
         return new FetchedStockDatas(result, indexChartResponse);
     }
 
-    public StockReturnData calculatePortfolioStockReturn(List<StockReturnData> stockReturns, List<Double> weights,
+    public StockReturnData calculatePortfolioStockReturn(boolean includeDividends, List<StockReturnData> stockReturns, List<Double> weights,
             List<Double> indexPrices) {
         if (stockReturns == null || stockReturns.isEmpty()) {
             throw new UnsupportedOperationException();
@@ -142,10 +137,11 @@ public class PortfolioReturnService {
             throw new IllegalArgumentException("Portfolio prices cannot be empty");
         }
         // 모든 ticker의 처의 가격
-        return stockReturnCalculator.calculateStockReturn("Portfolio", prices, timestamps, allDividends, indexPrices, initialAmount, 1.0);
+        return stockReturnCalculator.calculateStockReturn(includeDividends, "Portfolio", prices, timestamps, allDividends, indexPrices,
+                initialAmount, 1.0);
     }
 
-    private PortfolioReturnData calculatePortfolioReturnData(List<StockReturnData> stockReturns,
+    private PortfolioReturnData calculatePortfolioReturnData(boolean includeDividends, List<StockReturnData> stockReturns,
             List<Double> weights,
             List<Double> indexPrices) {
         if (stockReturns == null || stockReturns.isEmpty()) {
@@ -162,7 +158,7 @@ public class PortfolioReturnService {
 
         portfolioData.setStartDate(startDate);
         portfolioData.setEndDate(endDate);
-        portfolioData.setPortfolioStockReturn(calculatePortfolioStockReturn(stockReturns, weights, indexPrices));
+        portfolioData.setPortfolioStockReturn(calculatePortfolioStockReturn(includeDividends, stockReturns, weights, indexPrices));
         return portfolioData;
     }
 }

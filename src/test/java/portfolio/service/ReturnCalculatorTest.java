@@ -39,10 +39,9 @@ class ReturnCalculatorTest {
                 toUnixTimeSeconds(LocalDate.of(2023, 1, 1)),
                 toUnixTimeSeconds(LocalDate.of(2023, 2, 1)),
                 toUnixTimeSeconds(LocalDate.of(2023, 3, 1)));
-        List<Dividend> dividends = List.of();
 
         // When
-        List<ReturnRate> periodicReturnRates = calculator.calculatePeriodicReturnRates(prices, timestamps, dividends);
+        List<ReturnRate> periodicReturnRates = calculator.calculatePeriodicReturnRates(prices, timestamps);
         log.info("periodicReturnRate {}", periodicReturnRates);
         double volatility = calculator.calculateVolatility(periodicReturnRates);
         log.info("volatility {}", volatility);
@@ -75,43 +74,12 @@ class ReturnCalculatorTest {
                 toUnixTimeSeconds(LocalDate.of(2023, 10, 1)),
                 toUnixTimeSeconds(LocalDate.of(2023, 11, 1)),
                 toUnixTimeSeconds(LocalDate.of(2023, 12, 1)));
-        List<Dividend> dividends = List.of();
 
         // When
-        List<ReturnRate> periodicReturnRates = calculator.calculatePeriodicReturnRates(prices, timestamps, dividends);
+        List<ReturnRate> periodicReturnRates = calculator.calculatePeriodicReturnRates(prices, timestamps);
         log.info("periodicReturnRate {}", periodicReturnRates);
         double volatility = calculator.calculateVolatility(periodicReturnRates);
         log.info("volatility {}", volatility);
-    }
-
-    @Test
-    void shouldCalculateVolatilityWithDividends() {
-        // Given
-        ReturnCalculator calculator = new ReturnCalculator();
-        List<Double> prices = List.of(100.0, 110.0, 108.0);
-        List<Long> timestamps = List.of(
-                toUnixTimeSeconds(LocalDate.of(2023, 1, 1)),
-                toUnixTimeSeconds(LocalDate.of(2023, 2, 1)),
-                toUnixTimeSeconds(LocalDate.of(2023, 3, 1)));
-        Dividend dividend = new Dividend();
-        dividend.setAmount(2.0);
-        dividend.setDate(toUnixTimeSeconds(LocalDate.of(2023, 2, 3)));
-        List<Dividend> dividends = List.of(dividend);
-
-        // When
-        List<ReturnRate> returnRates = calculator.calculatePeriodicReturnRates(prices, timestamps, dividends);
-        double volatility = calculator.calculateVolatility(returnRates);
-
-        // Then
-        // 수익률 수동 계산:
-        // 1. 첫달: 100→110, 배당 없음. 수익률 = (110-100)/100 = 0.1
-        // 2. 둘째달: 110→108, 배당 2.0 재투자. 현금 2.0/108=0.018518...주 추가, 총 1.018518...주
-        // 가치: 1.018518...*108=110
-        // 수익률: (110-110)/110 = 0
-        // 평균: (0.1+0)/2=0.05
-        // 분산: ((0.1-0.05)^2 + (0-0.05)^2)/2 = (0.0025+0.0025)/2=0.0025
-        // 표준편차: sqrt(0.0025)=0.05
-        assertEquals(0.05, volatility, 0.0001);
     }
 
     @Test
@@ -175,10 +143,10 @@ class ReturnCalculatorTest {
         List<Double> prices = List.of(100.0, 110.0);
         List<Long> timestamps = List.of(
                 LocalDate.of(2023, 1, 1).atStartOfDay().toEpochSecond(ZoneOffset.UTC),
-                LocalDate.of(2023, 1, 2).atStartOfDay().toEpochSecond(ZoneOffset.UTC));
+                LocalDate.of(2023, 2, 2).atStartOfDay().toEpochSecond(ZoneOffset.UTC));
         Dividend dividend = new Dividend();
         dividend.setAmount(2.0);
-        dividend.setDate(LocalDate.of(2023, 1, 2).atStartOfDay().toEpochSecond(ZoneOffset.UTC));
+        dividend.setDate(LocalDate.of(2023, 2, 2).atStartOfDay().toEpochSecond(ZoneOffset.UTC));
         List<Dividend> dividends = List.of(dividend);
 
         // When
@@ -230,8 +198,8 @@ class ReturnCalculatorTest {
         List<Double> prices = List.of(100.0, 110.0, 121.0);
         List<Long> timestamps = List.of(
                 toUnixTimeSeconds(LocalDate.of(2023, 1, 1)),
-                toUnixTimeSeconds(LocalDate.of(2023, 1, 2)),
-                toUnixTimeSeconds(LocalDate.of(2023, 1, 3)));
+                toUnixTimeSeconds(LocalDate.of(2023, 2, 1)),
+                toUnixTimeSeconds(LocalDate.of(2023, 3, 1)));
         List<Dividend> dividends = List.of();
 
         // When
@@ -251,12 +219,12 @@ class ReturnCalculatorTest {
         List<Double> prices = List.of(100.0, 110.0, 108.0); // Price drops after dividend ex-date
         List<Long> timestamps = List.of(
                 toUnixTimeSeconds(LocalDate.of(2023, 1, 1)),
-                toUnixTimeSeconds(LocalDate.of(2023, 1, 5)),
-                toUnixTimeSeconds(LocalDate.of(2023, 1, 10)));
+                toUnixTimeSeconds(LocalDate.of(2023, 2, 1)),
+                toUnixTimeSeconds(LocalDate.of(2023, 3, 1)));
 
         Dividend dividend = new Dividend();
         dividend.setAmount(2.0);
-        dividend.setDate(toUnixTimeSeconds(LocalDate.of(2023, 1, 3)));
+        dividend.setDate(toUnixTimeSeconds(LocalDate.of(2023, 2, 3)));
         List<Dividend> dividends = List.of(dividend);
 
         // When
@@ -286,12 +254,12 @@ class ReturnCalculatorTest {
         List<Double> prices = List.of(100.0, 110.0); // Prices are for Day 1 and Day 3
         List<Long> timestamps = List.of(
                 toUnixTimeSeconds(LocalDate.of(2023, 1, 1)),
-                toUnixTimeSeconds(LocalDate.of(2023, 1, 3)));
+                toUnixTimeSeconds(LocalDate.of(2023, 2, 3)));
 
         Dividend dividend = new Dividend();
         dividend.setAmount(2.0);
         // Dividend is paid on Day 2, where there is no price point
-        dividend.setDate(toUnixTimeSeconds(LocalDate.of(2023, 1, 2)));
+        dividend.setDate(toUnixTimeSeconds(LocalDate.of(2023, 2, 2)));
         List<Dividend> dividends = List.of(dividend);
 
         // When
@@ -317,15 +285,15 @@ class ReturnCalculatorTest {
         List<Double> prices = List.of(100.0, 110.0); // Day 1 and Day 4
         List<Long> timestamps = List.of(
                 toUnixTimeSeconds(LocalDate.of(2023, 1, 1)),
-                toUnixTimeSeconds(LocalDate.of(2023, 1, 4)));
+                toUnixTimeSeconds(LocalDate.of(2023, 2, 4)));
 
         Dividend div1 = new Dividend();
         div1.setAmount(2.0);
-        div1.setDate(LocalDate.of(2023, 1, 2).atStartOfDay().toEpochSecond(ZoneOffset.UTC));
+        div1.setDate(LocalDate.of(2023, 2, 2).atStartOfDay().toEpochSecond(ZoneOffset.UTC));
 
         Dividend div2 = new Dividend();
         div2.setAmount(3.0);
-        div2.setDate(LocalDate.of(2023, 1, 3).atStartOfDay().toEpochSecond(ZoneOffset.UTC));
+        div2.setDate(LocalDate.of(2023, 2, 3).atStartOfDay().toEpochSecond(ZoneOffset.UTC));
 
         List<Dividend> dividends = List.of(div1, div2);
 
@@ -347,11 +315,11 @@ class ReturnCalculatorTest {
         List<Double> prices = List.of(100.0, 0.0); // Price drops to zero
         List<Long> timestamps = List.of(
                 LocalDate.of(2023, 1, 1).atStartOfDay().toEpochSecond(ZoneOffset.UTC),
-                LocalDate.of(2023, 1, 2).atStartOfDay().toEpochSecond(ZoneOffset.UTC));
+                LocalDate.of(2023, 2, 2).atStartOfDay().toEpochSecond(ZoneOffset.UTC));
 
         Dividend dividend = new Dividend();
         dividend.setAmount(2.0);
-        dividend.setDate(LocalDate.of(2023, 1, 2).atStartOfDay().toEpochSecond(ZoneOffset.UTC));
+        dividend.setDate(LocalDate.of(2023, 2, 2).atStartOfDay().toEpochSecond(ZoneOffset.UTC));
         List<Dividend> dividends = List.of(dividend);
 
         // When

@@ -8,7 +8,6 @@ import static org.junit.jupiter.api.Assertions.*;
 
 import java.time.LocalDate;
 import java.time.ZoneOffset;
-import java.util.ArrayList;
 import portfolio.api.ChartResponse.Dividend;
 import portfolio.model.Amount;
 
@@ -33,7 +32,7 @@ class ReturnCalculatorAmountTest {
         double initialAmount = 1000.0;
 
         // When
-        List<Amount> amountChanges = returnCalculator.calculateAmountChanges(prices, timestamps, new ArrayList<>(), initialAmount);
+        List<Amount> amountChanges = returnCalculator.calculateCumulativeAmounts(false, prices, timestamps, List.of(), initialAmount, 1.0);
 
         // Then
         assertEquals(1000.0, amountChanges.get(0).amount(), 0.001);
@@ -47,17 +46,17 @@ class ReturnCalculatorAmountTest {
         List<Double> prices = List.of(100.0, 110.0, 108.0);
         List<Long> timestamps = List.of(
             LocalDate.of(2023, 1, 1).atStartOfDay().toEpochSecond(ZoneOffset.UTC),
-            LocalDate.of(2023, 1, 2).atStartOfDay().toEpochSecond(ZoneOffset.UTC),
-            LocalDate.of(2023, 1, 3).atStartOfDay().toEpochSecond(ZoneOffset.UTC)
+            LocalDate.of(2023, 2, 2).atStartOfDay().toEpochSecond(ZoneOffset.UTC),
+            LocalDate.of(2023, 3, 3).atStartOfDay().toEpochSecond(ZoneOffset.UTC)
         );
         Dividend dividend = new Dividend();
         dividend.setAmount(2.0); // Dividend per share
-        dividend.setDate(LocalDate.of(2023, 1, 2).atStartOfDay().toEpochSecond(ZoneOffset.UTC));
+        dividend.setDate(LocalDate.of(2023, 2, 2).atStartOfDay().toEpochSecond(ZoneOffset.UTC));
         List<Dividend> dividends = List.of(dividend);
         double initialAmount = 1000.0;
 
         // When
-        List<Amount> amountChanges = returnCalculator.calculateAmountChanges(prices, timestamps, dividends, initialAmount);
+        List<Amount> amountChanges = returnCalculator.calculateCumulativeAmounts(true, prices, timestamps, dividends, initialAmount, 1.0);
 
         // Then
         // Day 1: Initial amount is 1000.0. Shares = 1000 / 100 = 10.
@@ -80,17 +79,17 @@ class ReturnCalculatorAmountTest {
         List<Double> prices = List.of(100.0, 110.0);
         List<Long> timestamps = List.of(
             LocalDate.of(2023, 1, 1).atStartOfDay().toEpochSecond(ZoneOffset.UTC),
-            LocalDate.of(2023, 1, 2).atStartOfDay().toEpochSecond(ZoneOffset.UTC)
+            LocalDate.of(2023, 2, 2).atStartOfDay().toEpochSecond(ZoneOffset.UTC)
         );
         Dividend dividend = new Dividend();
         dividend.setAmount(2.0);
-        dividend.setDate(LocalDate.of(2023, 1, 2).atStartOfDay().toEpochSecond(ZoneOffset.UTC));
+        dividend.setDate(LocalDate.of(2023, 2, 2).atStartOfDay().toEpochSecond(ZoneOffset.UTC));
         List<Dividend> dividends = List.of(dividend);
         double initialAmount = 1000.0;
         double weight = 0.5; // 50% allocated
 
         // When
-        List<Amount> amountChanges = returnCalculator.calculateCumulativeAmounts(prices, timestamps, dividends, initialAmount, weight);
+        List<Amount> amountChanges = returnCalculator.calculateCumulativeAmounts(true, prices, timestamps, dividends, initialAmount, weight);
 
         // Then
         // Day 1: Allocated amount = 1000 * 0.5 = 500.0. Shares = 500 / 100 = 5.
@@ -109,12 +108,12 @@ class ReturnCalculatorAmountTest {
         List<Double> prices = List.of(100.0, 110.0);
         List<Long> timestamps = List.of(
             LocalDate.of(2023, 1, 1).atStartOfDay().toEpochSecond(ZoneOffset.UTC),
-            LocalDate.of(2023, 1, 2).atStartOfDay().toEpochSecond(ZoneOffset.UTC)
+            LocalDate.of(2023, 2, 2).atStartOfDay().toEpochSecond(ZoneOffset.UTC)
         );
         double initialAmount = 1000.0;
 
         // When
-        List<Amount> amountChanges = returnCalculator.calculateAmountChanges(prices, timestamps, new ArrayList<>(), initialAmount);
+        List<Amount> amountChanges = returnCalculator.calculateCumulativeAmounts(false, prices, timestamps, List.of(), initialAmount, 1.0);
 
         // Then
         assertEquals(1000.0, amountChanges.get(0).amount(), 0.001);

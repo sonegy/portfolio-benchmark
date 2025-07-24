@@ -2,6 +2,7 @@ package portfolio.service;
 
 import org.springframework.stereotype.Service;
 
+import lombok.extern.slf4j.Slf4j;
 import portfolio.api.ChartResponse.Dividend;
 import portfolio.model.ChartData;
 import portfolio.model.PortfolioReturnData;
@@ -20,6 +21,7 @@ import java.util.TreeSet;
 /**
  * 다양한 형태의 차트 생성을 담당하는 서비스
  */
+@Slf4j
 @Service
 public class ChartGenerator {
 
@@ -59,21 +61,15 @@ public class ChartGenerator {
         if (stock == null || stock.getDividends() == null)
             return yearly;
 
-        // 실제 보유 주식수 계산: initialAmount / 시작가격
-        double shares = 1.0;
-        if (stock.getInitialAmount() > 0 && stock.getPrices() != null && !stock.getPrices().isEmpty()
-                && stock.getPrices().get(0) > 0) {
-            shares = stock.getInitialAmount() / stock.getPrices().get(0);
+        List<Long> timestamps = stock.getTimestamps();
+        for (int i = 0; i < timestamps.size(); i++) {
+            long timestamp = timestamps.get(i);
+            int year = DateUtils.toLocalDate(timestamp).getYear();
+            Double dividend = stock.getAmountDividens().isEmpty() ? 0.0 : stock.getAmountDividens().get(i);
+            //log.debug("calculateYearlyDividends year: {}, dividend: {}", year, dividend);
+            yearly.put(year, yearly.getOrDefault(year, 0.0) + dividend);
         }
 
-        for (Dividend div : stock.getDividends()) {
-            if (div == null)
-                continue;
-            long seconds = div.getDate();
-            int year = DateUtils.toLocalDate(seconds).getYear();
-            double amount = div.getAmount() * shares;
-            yearly.put(year, yearly.getOrDefault(year, 0.0) + amount);
-        }
         return yearly;
     }
 
@@ -128,6 +124,7 @@ public class ChartGenerator {
                     new HashMap<>(),
                     configurationService.createAmountChartConfiguration());
         }
+
         // 1. 연도별 배당금 합계 계산
         Map<String, Map<Integer, Double>> yearlyDividends = calculateAllYearlyDividends(stockReturns);
         // 2. 전체 연도 추출(오름차순)

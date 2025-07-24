@@ -29,23 +29,6 @@ public class StockFetcher {
         log.info("StockFetcher initialized with url: {}", url);
     }
 
-    @Cacheable(value = CacheConfig.StockFetcher_fetchHistory)
-    public ChartResponse fetchHistory(String ticker, long period1, long period2) {
-        String interval = IntervalCalculator.calculateOptimalInterval(period1, period2);        log.info("Fetching history for {} from {} to {} with interval {}", ticker, period1, period2, interval);
-        return restClient.get()
-                .uri(uriBuilder -> uriBuilder
-                        .scheme(scheme)
-                        .host(host)
-                        .port(port)
-                        .path("/v8/finance/chart/{ticker}")
-                        .queryParam("period1", period1)
-                        .queryParam("period2", period2)
-                        .queryParam("interval", interval)
-                        .build(ticker))
-                .retrieve()
-                .body(ChartResponse.class);
-    }
-
     /**
      * 2011년부터 현재까지 특정 ticker의 분배금(배당금) 내역을 조회한다.
      * 

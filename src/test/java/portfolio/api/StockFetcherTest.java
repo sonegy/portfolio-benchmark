@@ -15,9 +15,7 @@ import portfolio.service.PortfolioDataService;
 import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
 import static com.github.tomakehurst.wiremock.client.WireMock.get;
 import static com.github.tomakehurst.wiremock.client.WireMock.stubFor;
-import static com.github.tomakehurst.wiremock.client.WireMock.getRequestedFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo;
-import static com.github.tomakehurst.wiremock.client.WireMock.verify;
 import static org.junit.jupiter.api.Assertions.*;
 
 import java.util.ArrayList;
@@ -49,47 +47,6 @@ class StockFetcherTest {
     }
 
     @Test
-    void fetchHistory_shouldReturnApiResponse() {
-        String ticker = "AAPL";
-        long period1 = 1720224000L;
-        long period2 = 1720483200L;
-        stubFor(get(urlPathEqualTo("/v8/finance/chart/" + ticker))
-                .willReturn(aResponse()
-                        .withHeader("Content-Type", "application/json")
-                        .withBodyFile("fetch-history-aapl-response.json")));
-
-        ChartResponse response = fetcher.fetchHistory(ticker, period1, period2);
-        assertNotNull(response);
-        assertNotNull(response.getChart());
-        assertNotNull(response.getChart().getResult());
-        assertEquals("AAPL", response.getChart().getResult().get(0).getMeta().getSymbol());
-    }
-
-    @Test
-    void fetchHistory_shouldBeCached() {
-        // given
-        String ticker = "MSFT";
-        long period1 = 1720224000L;
-        long period2 = 1720483200L;
-
-        stubFor(get(urlPathEqualTo("/v8/finance/chart/" + ticker))
-                .willReturn(aResponse()
-                        .withHeader("Content-Type", "application/json")
-                        .withBodyFile("fetch-history-msft-response.json"))); // Use existing mock data
-
-        // when
-        ChartResponse response1 = fetcher.fetchHistory(ticker, period1, period2);
-        ChartResponse response2 = fetcher.fetchHistory(ticker, period1, period2);
-
-        // then
-        assertNotNull(response1);
-        assertNotNull(response2);
-        assertEquals(response1, response2); // Check if the same object is returned
-
-        verify(1, getRequestedFor(urlPathEqualTo("/v8/finance/chart/" + ticker)));
-    }
-
-    @Test
     void fetchHistory_shouldBeCached_TwoGivenValues() {
         // given
         List<String> tickers = new ArrayList<>();
@@ -112,7 +69,7 @@ class StockFetcherTest {
 
         for (int i = 0; i < 10; i++) {
             CompletableFuture<Map<String, ChartResponse>> stocks = new PortfolioDataService(fetcher)
-                    .fetchMultipleStocks(tickers, period1, period2);
+                    .fetchMultipleDividends(tickers, period1, period2);
             Map<String, ChartResponse> map = stocks.join();
             for (Map.Entry<String, ChartResponse> entry : map.entrySet()) {
                 String key = entry.getKey();
