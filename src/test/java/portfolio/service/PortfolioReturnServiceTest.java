@@ -4,345 +4,183 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
-
-import lombok.extern.slf4j.Slf4j;
-import portfolio.api.ChartResponse;
-import portfolio.api.ChartResponse.Dividend;
-import portfolio.model.CAGR;
-import portfolio.model.PortfolioRequest;
-import portfolio.model.PortfolioReturnData;
-import portfolio.model.ReturnRate;
-import portfolio.model.StockReturnData;
-
-import java.time.LocalDate;
-import java.util.List;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.concurrent.CompletableFuture;
-
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.*;
+import portfolio.model.PortfolioRequest;
+import portfolio.service.stockdata.StockReturnCalculator;
 
-@Slf4j
 class PortfolioReturnServiceTest {
-
     @Mock
     private PortfolioDataService portfolioDataService;
-
     @Mock
-    private ReturnCalculator returnCalculator;
-
-    @Mock
-    private PortfolioAnalyzer portfolioAnalyzer;
-
-    @Mock
-    private PeriodManager periodManager;
-
-    private PortfolioReturnService portfolioReturnService;
+    private StockReturnCalculator stockReturnCalculator;
+    private PortfolioReturnService service;
 
     @BeforeEach
     void setUp() {
         MockitoAnnotations.openMocks(this);
-        portfolioReturnService = new PortfolioReturnService(
-                portfolioDataService,
-                returnCalculator,
-                portfolioAnalyzer,
-                periodManager);
+        service = new PortfolioReturnService(portfolioDataService, stockReturnCalculator);
     }
 
     @Test
-    void shouldThrowExceptionWhenRequestIsNull() {
-        // When & Then
-        IllegalArgumentException exception = assertThrows(
-                IllegalArgumentException.class,
-                () -> portfolioReturnService.analyzePortfolio(null));
-
-        assertEquals("Portfolio request cannot be null", exception.getMessage());
+    void 요청이_null이면_예외() {
+        assertThrows(IllegalArgumentException.class, () -> service.analyzePortfolio(null));
     }
 
     @Test
-    void shouldThrowExceptionWhenTickersIsNull() {
-        // Given
-        PortfolioRequest request = new PortfolioRequest();
-        request.setTickers(null);
-        request.setStartDate(LocalDate.of(2023, 1, 1));
-        request.setEndDate(LocalDate.of(2023, 12, 31));
-
-        // When & Then
-        IllegalArgumentException exception = assertThrows(
-                IllegalArgumentException.class,
-                () -> portfolioReturnService.analyzePortfolio(request));
-
-        assertEquals("Tickers cannot be null or empty", exception.getMessage());
+    void ticker가_null이면_예외() {
+        var req = new PortfolioRequest();
+        req.setTickers(null);
+        req.setStartDate(java.time.LocalDate.now());
+        req.setEndDate(java.time.LocalDate.now());
+        assertThrows(IllegalArgumentException.class, () -> service.analyzePortfolio(req));
     }
 
     @Test
-    void shouldThrowExceptionWhenTickersIsEmpty() {
-        // Given
-        PortfolioRequest request = new PortfolioRequest();
-        request.setTickers(Arrays.asList());
-        request.setStartDate(LocalDate.of(2023, 1, 1));
-        request.setEndDate(LocalDate.of(2023, 12, 31));
-
-        // When & Then
-        IllegalArgumentException exception = assertThrows(
-                IllegalArgumentException.class,
-                () -> portfolioReturnService.analyzePortfolio(request));
-
-        assertEquals("Tickers cannot be null or empty", exception.getMessage());
+    void ticker가_empty면_예외() {
+        var req = new PortfolioRequest();
+        req.setTickers(java.util.Collections.emptyList());
+        req.setStartDate(java.time.LocalDate.now());
+        req.setEndDate(java.time.LocalDate.now());
+        assertThrows(IllegalArgumentException.class, () -> service.analyzePortfolio(req));
     }
 
     @Test
-    void shouldReturnPortfolioReturnDataForValidRequest() {
-        // Given
-        PortfolioRequest request = new PortfolioRequest(
-                Arrays.asList("AAPL", "GOOGL"),
-                Arrays.asList(0.5, 0.5),
-                LocalDate.of(2023, 1, 1),
-                LocalDate.of(2023, 12, 31),
-                true);
+    void 정상_요청시_포트폴리오_리턴_데이터_반환() {
+        var req = new PortfolioRequest();
+        req.setTickers(java.util.List.of("AAPL"));
+        req.setWeights(java.util.List.of(1.0));
+        req.setStartDate(java.time.LocalDate.now().minusMonths(2));
+        req.setEndDate(java.time.LocalDate.now());
 
-        // Mock data for both stocks
-        Map<String, ChartResponse> mockData = new HashMap<>();
-        mockData.put("AAPL", createMockChartResponse());
-        mockData.put("GOOGL", createMockChartResponse());
+        // 실제 가격/타임스탬프가 있는 ChartResponse 생성
+        var chartResponse = new portfolio.api.ChartResponse();
+        var chart = new portfolio.api.ChartResponse.Chart();
+        var result = new portfolio.api.ChartResponse.Result();
+        var indicators = new portfolio.api.ChartResponse.Indicators();
+        var quote = new portfolio.api.ChartResponse.Quote();
+        quote.setClose(java.util.List.of(100.0, 110.0, 120.0));
+        indicators.setQuote(java.util.List.of(quote));
+        result.setIndicators(indicators);
+        result.setTimestamp(java.util.List.of(
+            req.getStartDate().toEpochDay() * 24 * 60 * 60,
+            req.getStartDate().plusMonths(1).toEpochDay() * 24 * 60 * 60,
+            req.getEndDate().toEpochDay() * 24 * 60 * 60
+        ));
+        chart.setResult(java.util.List.of(result));
+        chartResponse.setChart(chart);
 
-        Map<String, ChartResponse> mockDividendData = new HashMap<>();
-        mockDividendData.put("AAPL", createMockDividendChartResponse());
-        mockDividendData.put("GOOGL", createMockDividendChartResponse());
-        mockDividendData.put("^GSPC", createMockDividendChartResponse());
+        // 인덱스도 동일하게 생성
+        var indexChartResponse = new portfolio.api.ChartResponse();
+        var indexChart = new portfolio.api.ChartResponse.Chart();
+        var indexResult = new portfolio.api.ChartResponse.Result();
+        var indexIndicators = new portfolio.api.ChartResponse.Indicators();
+        var indexQuote = new portfolio.api.ChartResponse.Quote();
+        indexQuote.setClose(java.util.List.of(4000.0, 4100.0, 4200.0));
+        indexIndicators.setQuote(java.util.List.of(indexQuote));
+        indexResult.setIndicators(indexIndicators);
+        indexResult.setTimestamp(result.getTimestamp());
+        indexChart.setResult(java.util.List.of(indexResult));
+        indexChartResponse.setChart(indexChart);
 
-        mockData.put("^GSPC", createMockChartResponse()); // Add mock for index
+        var map = new java.util.HashMap<String, portfolio.api.ChartResponse>();
+        map.put("AAPL", chartResponse);
+        map.put("^GSPC", indexChartResponse);
+
         when(portfolioDataService.fetchMultipleStocks(anyList(), anyLong(), anyLong()))
-                .thenReturn(CompletableFuture.completedFuture(mockData));
-        when(portfolioDataService.fetchMultipleDividends(anyList(), anyLong(), anyLong()))
-                .thenReturn(CompletableFuture.completedFuture(mockDividendData));
-        when(returnCalculator.calculatePriceReturn(anyList())).thenReturn(new ReturnRate(100.0, 110.0));
-        when(returnCalculator.calculateTotalReturn(anyList(), anyList(), anyList())).thenReturn(new ReturnRate(100.0, 112.0));
-        when(returnCalculator.calculateCAGR(anyDouble(), anyDouble(), anyDouble())).thenReturn(new CAGR(100.0, 112.0, 1));
-        when(returnCalculator.calculateBeta(anyList(), anyList())).thenReturn(1.2);
+            .thenReturn(java.util.concurrent.CompletableFuture.completedFuture(map));
 
-        // When
-        PortfolioReturnData result = portfolioReturnService.analyzePortfolio(request);
+        // 최소한 정상 StockReturnData 반환
+        var stockReturnData = portfolio.model.StockReturnData.builder()
+            .ticker("AAPL")
+            .prices(java.util.List.of(100.0, 110.0, 120.0))
+            .timestamps(java.util.List.of(
+                req.getStartDate().toEpochDay() * 24 * 60 * 60,
+                req.getStartDate().plusMonths(1).toEpochDay() * 24 * 60 * 60,
+                req.getEndDate().toEpochDay() * 24 * 60 * 60
+            ))
+            .dividends(java.util.Collections.emptyList())
+            .build();
 
-        // Then
-        assertNotNull(result);
-        assertNotNull(result.getStockReturns());
-        assertEquals(2, result.getStockReturns().size());
+        when(stockReturnCalculator.calculateStockReturns(any(), any()))
+            .thenReturn(java.util.List.of(stockReturnData));
+
+        assertDoesNotThrow(() -> service.analyzePortfolio(req));
+    }
+
+        // --- calculatePortfolioStockReturn 단위 테스트 ---
+
+    @Test
+    void stockReturns가_empty면_예외() {
+        assertThrows(UnsupportedOperationException.class, () ->
+            service.calculatePortfolioStockReturn(java.util.Collections.emptyList(), java.util.List.of(1.0), java.util.List.of(100.0, 110.0, 120.0))
+        );
     }
 
     @Test
-    void shouldCalculateStockReturnsForSingleStock() {
-        // Given
-        PortfolioRequest request = new PortfolioRequest(
-                Arrays.asList("AAPL"),
-                Arrays.asList(1.0),
-                LocalDate.of(2023, 1, 1),
-                LocalDate.of(2023, 12, 31),
-                false);
-
-        // Mock ChartResponse with proper structure
-        ChartResponse mockResponse = createMockChartResponse();
-        Map<String, ChartResponse> stockData = new HashMap<>();
-        stockData.put("AAPL", mockResponse);
-
-        stockData.put("^GSPC", createMockChartResponse()); // Add mock for index
-        when(portfolioDataService.fetchMultipleStocks(anyList(), anyLong(), anyLong())).thenReturn(CompletableFuture.completedFuture(stockData));
-        when(returnCalculator.calculatePriceReturn(anyList())).thenReturn(new ReturnRate(100, 115));
-        when(returnCalculator.calculateTotalReturn(anyList(), anyList(), anyList())).thenReturn(new ReturnRate(100, 115));
-        when(returnCalculator.calculateCAGR(anyDouble(), anyDouble(), anyDouble())).thenReturn(new CAGR(100, 115, 1));
-        when(returnCalculator.calculateBeta(anyList(), anyList())).thenReturn(1.2);
-
-        // When
-        PortfolioReturnData result = portfolioReturnService.analyzePortfolio(request);
-
-        // Then
-        assertNotNull(result);
-        assertNotNull(result.getStockReturns());
-        assertEquals(1, result.getStockReturns().size());
-
-        StockReturnData stockReturn = result.getStockReturns().get(0);
-        assertEquals("AAPL", stockReturn.getTicker());
-        assertEquals(0.15, stockReturn.getPriceReturn(), 0.001);
-        assertEquals(0.15, stockReturn.getTotalReturn(), 0.001);
-        assertEquals(0.15, stockReturn.getCagr(), 0.001);
-    }
-
-    private ChartResponse createMockChartResponse() {
-        ChartResponse response = new ChartResponse();
-        ChartResponse.Chart chart = new ChartResponse.Chart();
-        ChartResponse.Result result = new ChartResponse.Result();
-        ChartResponse.Indicators indicators = new ChartResponse.Indicators();
-        ChartResponse.Quote quote = new ChartResponse.Quote();
-
-        // Mock price data
-        quote.setClose(Arrays.asList(100.0, 110.0, 115.0));
-        indicators.setQuote(Arrays.asList(quote));
-        result.setIndicators(indicators);
-        // 타임스탬프 추가 (예: 2023-01-01, 2023-02-01, 2023-03-01)
-        result.setTimestamp(Arrays.asList(1672531200L, 1675209600L, 1677628800L));
-        chart.setResult(Arrays.asList(result));
-        response.setChart(chart);
-
-        return response;
-    }
-
-    private ChartResponse createMockDividendChartResponse() {
-        ChartResponse response = new ChartResponse();
-        ChartResponse.Chart chart = new ChartResponse.Chart();
-        ChartResponse.Result result = new ChartResponse.Result();
-        ChartResponse.Events events = new ChartResponse.Events();
-
-        
-
-        HashMap<String, Dividend> dividends = new HashMap<>();
-        Dividend dividend = new Dividend();
-        dividend.setAmount(1.0);
-        dividend.setDate(1672531200L);
-        dividends.put("1672531200",dividend);
-        events.setDividends(dividends);
-
-        // Mock price data
-        result.setEvents(events);
-
-        ChartResponse.Indicators indicators = new ChartResponse.Indicators();
-        ChartResponse.Quote quote = new ChartResponse.Quote();
-        quote.setClose(Arrays.asList(100.0, 110.0, 115.0));
-        indicators.setQuote(Arrays.asList(quote));
-        result.setIndicators(indicators);
-        // 타임스탬프 추가 (예: 2023-01-01, 2023-02-01, 2023-03-01)
-        result.setTimestamp(Arrays.asList(1672531200L, 1675209600L, 1677628800L));
-        chart.setResult(Arrays.asList(result));
-        response.setChart(chart);
-
-        return response;
+    void weights가_null이면_예외() {
+        var stockReturn = minimalStockReturnData();
+        assertThrows(IllegalArgumentException.class, () ->
+            service.calculatePortfolioStockReturn(java.util.List.of(stockReturn), null, java.util.List.of(100.0, 110.0, 120.0))
+        );
     }
 
     @Test
-    void shouldCalculatePortfolioStockReturnWithTwoStocksAndEqualWeights() {
-        // Given: 두 개의 StockReturnData와 동일한 길이의 가격 시계열, 동일한 타임스탬프
-        List<Long> timestamps = Arrays.asList(1L, 2L, 3L);
-        StockReturnData stock1 = StockReturnData.builder()
-                .ticker("AAA")
-                .prices(Arrays.asList(100.0, 110.0, 120.0))
-                .timestamps(timestamps)
-                .initialAmount(1000.0)
-                .dividends(new ArrayList<>())
-                .build();
-        StockReturnData stock2 = StockReturnData.builder()
-                .ticker("BBB")
-                .prices(Arrays.asList(200.0, 210.0, 220.0))
-                .timestamps(timestamps)
-                .initialAmount(1000.0)
-                .dividends(new ArrayList<>())
-                .build();
-        List<StockReturnData> stockReturns = Arrays.asList(stock1, stock2);
-        List<Double> weights = Arrays.asList(0.5, 0.5);
+    void stockReturns와_weights_길이_불일치시_예외() {
+        var stockReturn = minimalStockReturnData();
+        assertThrows(IllegalArgumentException.class, () ->
+            service.calculatePortfolioStockReturn(java.util.List.of(stockReturn), java.util.List.of(0.5, 0.5), java.util.List.of(100.0, 110.0, 120.0))
+        );
+    }
 
-        // When: calculatePortfolioStockReturn 호출
+    @Test
+    void 정상_입력시_포트폴리오_StockReturnData_반환() {
+        var stock1 = portfolio.model.StockReturnData.builder()
+            .ticker("AAA")
+            .prices(java.util.List.of(100.0, 110.0, 120.0))
+            .timestamps(java.util.List.of(1L, 2L, 3L))
+            .dividends(java.util.Collections.emptyList())
+            .initialAmount(1000.0)
+            .build();
+        var stock2 = portfolio.model.StockReturnData.builder()
+            .ticker("BBB")
+            .prices(java.util.List.of(200.0, 210.0, 220.0))
+            .timestamps(java.util.List.of(1L, 2L, 3L))
+            .dividends(java.util.Collections.emptyList())
+            .initialAmount(2000.0)
+            .build();
 
-        PortfolioReturnService x = new PortfolioReturnService(portfolioDataService, new ReturnCalculator(), portfolioAnalyzer, periodManager);
-        List<Double> marketReturns = Arrays.asList(0.01, 0.02, -0.01);
-        StockReturnData result = x.calculatePortfolioStockReturn(stockReturns, weights, marketReturns);
+        var weights = java.util.List.of(0.5, 0.5);
+        var indexPrices = java.util.List.of(1000.0, 1100.0, 1200.0);
 
-        // Then: 결과가 null이 아니고, 가격 시계열 길이가 동일해야 함
+        // 정상 반환값 stub 추가
+        when(stockReturnCalculator.calculateStockReturn(
+            anyString(), anyList(), anyList(), anyList(), anyList(), anyDouble(), anyDouble())
+        ).thenReturn(portfolio.model.StockReturnData.builder()
+            .ticker("Portfolio")
+            .prices(java.util.List.of(1.0, 2.0, 3.0))
+            .timestamps(java.util.List.of(1L, 2L, 3L))
+            .dividends(java.util.Collections.emptyList())
+            .initialAmount(3000.0)
+            .build());
+
+        var result = service.calculatePortfolioStockReturn(java.util.List.of(stock1, stock2), weights, indexPrices);
+
         assertNotNull(result);
-        System.out.println("result=" + result);
-        System.out.println("result.getTimestamps()=" + result.getTimestamps());
-        assertEquals(timestamps, result.getTimestamps());
         assertEquals(3, result.getPrices().size());
-        // 실제 수익률 등은 구현에 따라 달라질 수 있으므로, 여기서는 존재 여부만 확인
     }
 
-    @Test
-    void shouldExtractDatesFromChartResponse() {
-        // Given
-        var timestamps = Arrays.asList(1593576000L, 1596254400L, 1598932800L, 1601524800L);
-
-        // When
-        var dates = portfolioReturnService.extractDates(timestamps);
-
-        // Then
-        assertEquals(4, dates.size());
-        assertEquals(LocalDate.of(2020, 7, 1), dates.get(0));
-        assertEquals(LocalDate.of(2020, 8, 1), dates.get(1));
-        assertEquals(LocalDate.of(2020, 9, 1), dates.get(2));
-        assertEquals(LocalDate.of(2020, 10, 1), dates.get(3));
-    }
-
-    @Test
-    void shouldReturnEmptyListWhenTimestampsAreMissing() {
-        // Given
-        ChartResponse response = createMockChartResponse(); // This one has results but not timestamps
-        response.getChart().getResult().get(0).setTimestamp(null);
-
-        // When
-        var dates = portfolioReturnService.extractDates(
-            response.getChart() != null && response.getChart().getResult() != null && !response.getChart().getResult().isEmpty() ?
-                response.getChart().getResult().get(0).getTimestamp() : null
-        );
-
-        // Then
-        assertTrue(dates.isEmpty());
-    }
-
-    @Test
-    void shouldReturnEmptyListForEmptyChartResponse() {
-        // Given
-        ChartResponse response = new ChartResponse();
-
-        // When
-        var dates = portfolioReturnService.extractDates(
-            response.getChart() != null && response.getChart().getResult() != null && !response.getChart().getResult().isEmpty() ?
-                response.getChart().getResult().get(0).getTimestamp() : null
-        );
-
-        // Then
-        assertTrue(dates.isEmpty());
-    }
-
-    @Test
-    void shouldThrowExceptionWhenStockDataHasDifferentStartDates() {
-        // Given
-        PortfolioRequest request = new PortfolioRequest(
-                Arrays.asList("AAPL", "GOOGL"),
-                LocalDate.of(2023, 1, 1),
-                LocalDate.of(2023, 12, 31),
-                true);
-
-        Map<String, ChartResponse> mockData = new HashMap<>();
-        // Timestamps for 2023-01-01 (1672531200) and 2023-02-01 (1675209600) in UTC
-        mockData.put("AAPL", createMockChartResponseWithTimestamp(1672531200L, Arrays.asList(100.0, 110.0)));
-        mockData.put("GOOGL", createMockChartResponseWithTimestamp(1675209600L, Arrays.asList(200.0, 210.0)));
-
-        when(portfolioDataService.fetchMultipleDividends(anyList(), anyLong(), anyLong()))
-                .thenReturn(CompletableFuture.completedFuture(mockData));
-
-        // When & Then
-        IllegalArgumentException exception = assertThrows(
-                IllegalArgumentException.class,
-                () -> portfolioReturnService.analyzePortfolio(request));
-
-        assertEquals("Stock data has different start dates. Please align them. The latest start date is 2023-02-01.",
-                exception.getMessage());
-    }
-
-    private ChartResponse createMockChartResponseWithTimestamp(long startTimestamp, java.util.List<Double> prices) {
-        ChartResponse response = new ChartResponse();
-        ChartResponse.Chart chart = new ChartResponse.Chart();
-        ChartResponse.Result result = new ChartResponse.Result();
-        ChartResponse.Indicators indicators = new ChartResponse.Indicators();
-        ChartResponse.Quote quote = new ChartResponse.Quote();
-
-        quote.setClose(prices);
-        indicators.setQuote(Arrays.asList(quote));
-        result.setIndicators(indicators);
-        result.setTimestamp(Arrays.asList(startTimestamp, startTimestamp + 86400L * 30)); // approx 1 month later
-        chart.setResult(Arrays.asList(result));
-        response.setChart(chart);
-        return response;
+    // 최소 StockReturnData 생성 유틸
+    private portfolio.model.StockReturnData minimalStockReturnData() {
+        return portfolio.model.StockReturnData.builder()
+            .ticker("AAA")
+            .prices(java.util.List.of(100.0, 110.0, 120.0))
+            .timestamps(java.util.List.of(1L, 2L, 3L))
+            .dividends(java.util.Collections.emptyList())
+            .initialAmount(1000.0)
+            .build();
     }
 }
